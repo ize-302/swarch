@@ -101,7 +101,7 @@ aur_install() {
 
   # swayfx's PKGBUILD has named versioned scenefx packages (scenefx0.5) that
   # only ever existed in the AUR. The library itself is `scenefx` in extra.
-  dep="$(grep -oE '"scenefx[0-9.]+"' "$tmp/$pkg/PKGBUILD" | head -1 | tr -d '"')"
+  dep="$(sed -nE 's/.*"(scenefx[0-9.]+)".*/\1/p' "$tmp/$pkg/PKGBUILD" | head -1)"
   if [ -n "$dep" ] && ! pacman -Si "$dep" >/dev/null 2>&1 &&
     ! pacman -Qq "$dep" >/dev/null 2>&1; then
     echo "    $dep is not in the repos, building against scenefx instead"
