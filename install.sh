@@ -23,15 +23,21 @@ packages=(
   bluez bluez-utils blueman
   # fonts
   ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji
+  cantarell-fonts adwaita-fonts
+  # GTK icons (the theme itself, arc-gtk-theme, is in the AUR)
+  papirus-icon-theme
   # needed by this script and to build swayfx
   rsync git base-devel
 )
 sddm_packages=(sddm qt6-virtualkeyboard qt6-svg xorg-server xorg-xrandr)
-aur_packages=(swayfx)
+aur_packages=(swayfx arc-gtk-theme)
 
 # Entries of config/ that land in ~/.config. Everything in bin/ lands in
 # ~/.local/bin.
 config_entries=(sway waybar quickshell dunst alacritty fontconfig)
+# Single files: what else lives in those directories (GTK bookmarks, gtk.css)
+# is yours. config/gtk-2.0/gtkrc lands in ~/.gtkrc-2.0.
+config_files=(gtk-3.0/settings.ini gtk-4.0/settings.ini)
 
 backup="$HOME/.local/state/swarch/backup/$(date +%Y%m%d-%H%M%S)"
 dm_unit=/etc/systemd/system/display-manager.service
@@ -88,7 +94,7 @@ fi
 # official repos. No AUR helper needed.
 aur_install() {
   local pkg=$1 tmp dep
-  local -a confirm=(--noconfirm)
+  local -a confirm=(--noconfirm) flags=()
 
   tmp="$(mktemp -d)"
   git clone --depth 1 "https://aur.archlinux.org/$pkg.git" "$tmp/$pkg"
@@ -106,21 +112,32 @@ aur_install() {
   if pacman -Qq sway >/dev/null 2>&1; then
     confirm=()
   fi
-  (cd "$tmp/$pkg" && makepkg -si "${confirm[@]}")
+  # arc-gtk-theme's tarball is signed with a key that is not in your keyring.
+  # Its checksum in the PKGBUILD is still verified.
+  if [ "$pkg" = arc-gtk-theme ]; then
+    flags+=(--skippgpcheck)
+  fi
+  (cd "$tmp/$pkg" && makepkg -si "${flags[@]}" "${confirm[@]}")
   rm -rf "$tmp"
 }
 
 install_packages() {
   local pkg
+  local -a missing
 
   echo "[+] Installing packages..."
   if [ "$with_sddm" = 1 ]; then
     packages+=("${sddm_packages[@]}")
   fi
-  sudo pacman -S --needed --noconfirm "${packages[@]}"
+  # Only what is not already satisfied: a package you have that provides one
+  # of these (papirus-icon-theme-git, say) would otherwise be a conflict
+  mapfile -t missing < <(pacman -T "${packages[@]}")
+  if [ "${#missing[@]}" -gt 0 ]; then
+    sudo pacman -S --needed --noconfirm "${missing[@]}"
+  fi
 
   for pkg in "${aur_packages[@]}"; do
-    if ! pacman -Qq "$pkg" >/dev/null 2>&1; then
+    if ! pacman -T "$pkg" >/dev/null 2>&1; then
       echo "[+] Building $pkg from the AUR..."
       aur_install "$pkg"
     fi
@@ -184,6 +201,10 @@ install_configs() {
   for entry in "${config_entries[@]}"; do
     deploy "$repo/config/$entry" "$HOME/.config/$entry"
   done
+  for file in "${config_files[@]}"; do
+    deploy "$repo/config/$file" "$HOME/.config/$file"
+  done
+  deploy "$repo/config/gtk-2.0/gtkrc" "$HOME/.gtkrc-2.0"
   for file in "$repo"/bin/*; do
     deploy "$file" "$HOME/.local/bin/$(basename "$file")"
   done

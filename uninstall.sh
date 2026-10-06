@@ -7,6 +7,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 repo=$PWD
 
 config_entries=(sway waybar quickshell dunst alacritty fontconfig)
+config_files=(gtk-3.0/settings.ini gtk-4.0/settings.ini)
 removed="$HOME/.local/state/swarch/removed-$(date +%Y%m%d-%H%M%S)"
 
 with_sddm=1
@@ -28,7 +29,7 @@ for arg in "$@"; do
 done
 
 if [ "$confirm" = 1 ]; then
-  read -r -p "Remove the swarch configs from ~/.config and ~/.local/bin? [y/N] " answer </dev/tty
+  read -r -p "Remove the swarch configs from ~/.config, ~/.local/bin and ~/.gtkrc-2.0? [y/N] " answer </dev/tty
   case "$answer" in
   y | Y | yes) ;;
   *) exit 0 ;;
@@ -53,6 +54,10 @@ echo "[+] Removing configs..."
 for entry in "${config_entries[@]}"; do
   remove "$HOME/.config/$entry"
 done
+for file in "${config_files[@]}"; do
+  remove "$HOME/.config/$file"
+done
+remove "$HOME/.gtkrc-2.0"
 for file in "$repo"/bin/*; do
   remove "$HOME/.local/bin/$(basename "$file")"
 done

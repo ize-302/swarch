@@ -13,6 +13,8 @@ editor setup, no shell changes.
 - **Dunst** notifications, **Alacritty** terminal
 - **SDDM** login screen with a matching theme
 - Audio (PipeWire), network and bluetooth applets, JetBrains Mono Nerd Font
+- GTK apps in **Arc-Dark** with **Papirus-Dark** icons and the Adwaita Sans
+  font (Cantarell for GTK 2)
 
 ## Requirements
 
@@ -40,12 +42,13 @@ Then reboot, or log out and pick **Sway** at the login screen.
 ### What the installer does
 
 1. Installs the packages listed at the top of `install.sh` with `pacman`.
-2. Builds `swayfx` from the AUR with `makepkg` (no AUR helper is installed).
-   If `sway` is installed you are asked to let `swayfx` replace it. Later
-   `swayfx` updates are up to you, through an AUR helper or by removing the
-   package and running the installer again.
-3. Copies `config/` into `~/.config` and `bin/` into `~/.local/bin`. Anything
-   it would overwrite is first copied to
+2. Builds `swayfx` and `arc-gtk-theme` from the AUR with `makepkg` (no AUR
+   helper is installed). If `sway` is installed you are asked to let `swayfx`
+   replace it. Later updates of these two are up to you, through an AUR helper
+   or by removing the package and running the installer again.
+3. Copies `config/` into `~/.config` and `bin/` into `~/.local/bin`, and
+   writes `~/.gtkrc-2.0`. Of `~/.config/gtk-3.0` and `gtk-4.0` only
+   `settings.ini` is touched. Anything it would overwrite is first copied to
    `~/.local/state/swarch/backup/<timestamp>/`.
 4. Installs the SDDM theme to `/usr/share/sddm/themes/custom` and selects it.
 5. Enables NetworkManager, bluetooth and SDDM. NetworkManager is skipped if
@@ -109,8 +112,9 @@ Running the one-liner again does the same.
 ./uninstall.sh
 ```
 
-Moves the swarch configs out of `~/.config` and `~/.local/bin` into
-`~/.local/state/swarch/removed-<timestamp>/` and removes the SDDM theme.
+Moves the swarch configs out of `~/.config` and `~/.local/bin`, and
+`~/.gtkrc-2.0`, into `~/.local/state/swarch/removed-<timestamp>/` and removes
+the SDDM theme.
 Packages and services are left alone. `--no-sddm` keeps the theme, `-y` skips
 the question.
 

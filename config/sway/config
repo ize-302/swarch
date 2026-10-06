@@ -65,6 +65,14 @@ exec_always --no-startup-id "pgrep -x nm-applet || nm-applet --indicator"
 # too: it depends on StatusIcon and would pull it back in.
 exec gsettings set org.blueman.general plugin-list "['!StatusIcon', '!ShowConnected']"
 
+# GTK theme, icons and font. Under Wayland GTK 3/4 read these from gsettings,
+# not from settings.ini. color-scheme is for apps that ignore GTK themes.
+set $gnome_schema org.gnome.desktop.interface
+exec gsettings set $gnome_schema gtk-theme 'Arc-Dark'
+exec gsettings set $gnome_schema icon-theme 'Papirus-Dark'
+exec gsettings set $gnome_schema font-name 'Adwaita Sans 11'
+exec gsettings set $gnome_schema color-scheme 'prefer-dark'
+
 # Clipboard history: store every copy so it survives the source app closing
 exec wl-paste --type text --watch cliphist store
 exec wl-paste --type image --watch cliphist store
