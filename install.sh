@@ -116,6 +116,9 @@ aur_install() {
   # Its checksum in the PKGBUILD is still verified.
   if [ "$pkg" = arc-gtk-theme ]; then
     flags+=(--skippgpcheck)
+    # Its GNOME Shell gresource step lists directories as input files, which
+    # current meson refuses. The GTK themes don't need it.
+    sed -i 's/-Dgnome_shell_gresource=true/-Dgnome_shell_gresource=false/' "$tmp/$pkg/PKGBUILD"
   fi
   (cd "$tmp/$pkg" && makepkg -si "${flags[@]}" "${confirm[@]}")
   rm -rf "$tmp"
