@@ -1,0 +1,311 @@
+# SwayFX settings
+
+# Logo key. Use Mod1 for Alt.
+set $mod Mod4
+# Home row direction keys
+set $left h
+set $down j
+set $up k
+set $right l
+
+set $term alacritty
+
+set $menu ~/.local/bin/app-menu
+
+# Font for window titles. Will also be used by the bar unless a different font
+# is used in the bar {} block below.
+font pango:JetBrainsMono NF Medium 13
+
+animation_duration_ms 250
+
+blur disable
+# blur_xray enables wallpaper blurring without blurring windows below
+blur_xray disable
+blur_passes 4
+blur_radius 8
+# Grain + richer colour so the blur reads as frosted glass, not a flat tint
+blur_noise 0.06
+# blur_brightness <float value 0 - 2>
+# blur_contrast <float value 0 - 2>
+blur_saturation 1.4
+
+# Frosted glass behind waybar, dunst and the launcher (their backgrounds are translucent in
+# style.css / dunstrc / Theme.qml). Independent of the window
+# `blur` setting above.
+layer_effects "waybar" blur enable; blur_ignore_transparent enable
+layer_effects "notifications" blur enable; blur_ignore_transparent enable
+layer_effects "launcher" blur enable; blur_ignore_transparent enable
+
+corner_radius 1
+
+gaps inner 10
+
+default_border pixel 2
+default_floating_border normal
+hide_edge_borders smart
+
+# corner radius needs gaps to be visible
+
+# SwayFX also features window drop shadows, which, of course, can be enabled at any time
+shadows disable
+shadows_on_csd enable
+
+# Wallpaper. Uncomment and point at an image (needs swaybg). Stock ones ship
+# with swayfx in /usr/share/backgrounds/sway/.
+# output * bg ~/Pictures/wallpaper.jpg fill
+
+# Answers password prompts from GUI apps (network settings, bluetooth)
+exec /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+
+# System tray applets
+exec_always --no-startup-id "pgrep -x nm-applet || nm-applet --indicator"
+
+# blueman-manager auto-starts blueman-applet; stop that applet adding a tray
+# icon, since waybar's bluetooth module is the icon. ShowConnected must go
+# too: it depends on StatusIcon and would pull it back in.
+exec gsettings set org.blueman.general plugin-list "['!StatusIcon', '!ShowConnected']"
+
+# Clipboard history: store every copy so it survives the source app closing
+exec wl-paste --type text --watch cliphist store
+exec wl-paste --type image --watch cliphist store
+
+# App launcher, power menu and clipboard menu daemon, toggled by
+# ~/.local/bin/app-menu ($menu), ~/.local/bin/power-menu
+# and ~/.local/bin/clipboard-menu
+exec qs -c launcher -d
+
+# Machine-specific settings (output layout and scale, lid switch, input
+# devices) go in ~/.config/sway/local.d/*.conf. The installer never touches
+# that directory. See the README for an example.
+include ~/.config/sway/local.d/*.conf
+
+#
+# Example configuration:
+#
+#   output HDMI-A-1 resolution 1920x1080 position 1920,0
+#
+# You can get the names of your outputs by running: swaymsg -t get_outputs
+
+### Idle configuration
+#
+# Lock after 5 minutes idle. The session is also locked before a manual
+# suspend (power menu).
+exec swayidle -w \
+         timeout 300 '~/.local/bin/lock-screen' \
+         before-sleep '~/.local/bin/lock-screen'
+
+# Don't go idle while something is fullscreen (video, presentations)
+for_window [shell=".*"] inhibit_idle fullscreen
+
+### Input configuration
+#
+# Example configuration:
+#
+#   input type:touchpad {
+#       dwt enabled
+#       tap enabled
+#       natural_scroll enabled
+#       middle_emulation enabled
+#   }
+#
+#   input type:keyboard {
+#       xkb_layout "eu"
+#   }
+#
+# You can also configure each device individually.
+# Read `man 5 sway-input` for more information about this section.
+
+input type:touchpad {
+    tap enabled
+    natural_scroll enabled
+}
+
+# Four-finger swipe switches workspace on the current monitor. Directions match
+# natural scrolling: swipe left brings in the next workspace, as if dragging it.
+bindgesture swipe:4:left workspace next_on_output
+bindgesture swipe:4:right workspace prev_on_output
+
+# power options: menu in the bottom left corner (lock, logout, sleep, hibernate, reboot, shutdown)
+bindsym $mod+Escape exec ~/.local/bin/power-menu
+
+bindsym $mod+Return exec $term
+
+# Kill focused window
+bindsym $mod+x kill
+
+# Start your launcher
+bindsym $mod+space exec $menu
+
+# Clipboard history picker
+bindsym $mod+c exec ~/.local/bin/clipboard-menu
+
+# Network/Bluetooth GUIs (swayfx tray can't render dbusmenu popups from nm-applet)
+bindsym $mod+n exec nm-connection-editor
+bindsym $mod+Shift+b exec blueman-manager
+
+# Use Mouse+$mod to drag floating windows to their wanted position
+floating_modifier $mod normal
+
+# Reload the configuration file
+bindsym $mod+Shift+r reload
+
+# Exit SwayFX (logs you out of your Wayland session)
+bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit SwayFX? This will end your Wayland session.' -B 'Yes, exit SwayFX' 'swaymsg exit'
+
+#
+# Moving around:
+#
+    # Move your focus around
+    bindsym $mod+$left focus left
+    bindsym $mod+$down focus down
+    bindsym $mod+$up focus up
+    bindsym $mod+$right focus right
+    # Or use $mod+[up|down|left|right]
+    bindsym $mod+Left focus left
+    bindsym $mod+Down focus down
+    bindsym $mod+Up focus up
+    bindsym $mod+Right focus right
+
+    # Move the focused window with the same, but add Shift
+    bindsym $mod+Shift+$left move left
+    bindsym $mod+Shift+$down move down
+    bindsym $mod+Shift+$up move up
+    bindsym $mod+Shift+$right move right
+
+    # Ditto, with arrow keys
+    bindsym $mod+Shift+Left move left
+    bindsym $mod+Shift+Down move down
+    bindsym $mod+Shift+Up move up
+    bindsym $mod+Shift+Right move right
+#
+# Workspaces:
+#
+    # Switch to workspace
+    bindsym $mod+1 workspace number 1
+    bindsym $mod+2 workspace number 2
+    bindsym $mod+3 workspace number 3
+    bindsym $mod+4 workspace number 4
+    bindsym $mod+5 workspace number 5
+    bindsym $mod+6 workspace number 6
+    bindsym $mod+7 workspace number 7
+    bindsym $mod+8 workspace number 8
+    bindsym $mod+9 workspace number 9
+    bindsym $mod+0 workspace number 10
+    # Move focused container to workspace
+    bindsym $mod+Shift+1 move container to workspace number 1
+    bindsym $mod+Shift+2 move container to workspace number 2
+    bindsym $mod+Shift+3 move container to workspace number 3
+    bindsym $mod+Shift+4 move container to workspace number 4
+    bindsym $mod+Shift+5 move container to workspace number 5
+    bindsym $mod+Shift+6 move container to workspace number 6
+    bindsym $mod+Shift+7 move container to workspace number 7
+    bindsym $mod+Shift+8 move container to workspace number 8
+    bindsym $mod+Shift+9 move container to workspace number 9
+    bindsym $mod+Shift+0 move container to workspace number 10
+    # Note: workspaces can have any name you want, not just numbers.
+    # We just use 1-10 as the default.
+
+# split in horizontal orientation
+bindsym $mod+b splith
+# split in vertical orientation
+bindsym $mod+v splitv
+
+
+# Make the current focus fullscreen
+bindsym $mod+f fullscreen
+
+# Toggle the current focus between tiling and floating mode
+bindsym $mod+Shift+space floating toggle
+
+#
+# Scratchpad:
+#
+  # SwayFX has a "scratchpad", which is a bag of holding for windows.
+    # You can send windows there and get them back later.
+
+    # Move the currently focused window to the scratchpad
+    bindsym $mod+Shift+minus move scratchpad
+
+    # Show the next scratchpad window or hide the focused scratchpad window.
+    # If there are multiple scratchpad windows, this command cycles through them.
+    bindsym $mod+minus scratchpad show
+
+#
+# Resizing containers:
+#
+mode "resize" {
+    # left will shrink the containers width
+    # right will grow the containers width
+    # up will shrink the containers height
+    # down will grow the containers height
+    bindsym $left resize shrink width 10px
+    bindsym $down resize grow height 10px
+    bindsym $up resize shrink height 10px
+    bindsym $right resize grow width 10px
+
+    # Ditto, with arrow keys
+    bindsym Left resize shrink width 10px
+    bindsym Down resize grow height 10px
+    bindsym Up resize shrink height 10px
+    bindsym Right resize grow width 10px
+
+    # Return to default mode
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+    bindsym $mod+r mode "default"
+}
+bindsym $mod+r mode "resize"
+#
+# Utilities:
+#
+    # Special keys to adjust volume via PulseAudio
+    bindsym --locked XF86AudioRaiseVolume exec pactl set-sink-volume \@DEFAULT_SINK@ +5%
+    bindsym --locked XF86AudioLowerVolume exec pactl set-sink-volume \@DEFAULT_SINK@ -5%
+    bindsym --locked XF86AudioMute exec pactl set-sink-mute \@DEFAULT_SINK@ toggle
+    bindsym --locked XF86AudioMicMute exec pactl set-source-mute \@DEFAULT_SOURCE@ toggle
+
+    # Special keys to adjust brightness via brightnessctl
+    bindsym --locked XF86MonBrightnessDown exec brightnessctl --min-val=1 -q set 3%-
+    bindsym --locked XF86MonBrightnessUp exec brightnessctl -q set 3%+
+
+    # Special keys to control media via playerctl
+    bindsym --locked XF86AudioPlay exec playerctl play-pause
+    bindsym --locked XF86AudioPause exec playerctl play-pause
+    bindsym --locked XF86AudioPrev exec playerctl previous
+    bindsym --locked XF86AudioNext exec playerctl next
+    bindsym --locked XF86AudioStop exec playerctl stop
+
+#
+# Status Bar:
+#
+# Read `man 5 sway-bar` for more information about this section.
+bar {
+				swaybar_command waybar
+        # position bottom
+        # tray_output *
+        # icon_theme Papirus-Dark
+
+        colors {
+            separator #414868
+            background #15161e
+            statusline #B1B1B1
+            focused_workspace #1a1b26 #9ece6a #1a1b26
+            active_workspace #333333 #333333 #888888
+            inactive_workspace #1a1b26 #1a1b26 #9ece6a
+            urgent_workspace #7dd3fc #7dd3fc #15161e
+        }
+}
+
+
+## Colours
+set $base00 #282828
+set $base01 #fbf1c7
+set $base02 #cc241d
+set $base03 #9ece6a
+set $base04 #ffffff
+
+## Window Colours
+## class border background text indicator child_border
+client.focused   $base04  $base00  $base01  $base02  $base03
+
+include /etc/sway/config.d/*

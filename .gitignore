@@ -1,0 +1,6 @@
+# Replaced by Quickshell with a link to a generated file
+config/quickshell/*/.qmlls.ini
+# Machine-specific sway settings, only present here after ./install.sh --link
+config/sway/local.d/
+
+note.txt

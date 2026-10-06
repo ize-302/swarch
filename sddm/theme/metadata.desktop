@@ -1,0 +1,14 @@
+; Based on SilentSDDM: https://github.com/uiriansan/SilentSDDM
+
+[SddmGreeterTheme]
+Name=Custom
+Type=sddm-theme
+Description=Flat Tokyo Night login screen matching the sway, waybar and Quickshell setup.
+License=GPL-3.0-or-later
+Version=1.5.0
+Theme-Id=custom
+Theme-API=2.0
+MainScript=Main.qml
+QtVersion=6
+
+ConfigFile=configs/default.conf

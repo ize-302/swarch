@@ -1,0 +1,229 @@
+/* Colours taken from the sway `bar { colors { ... } }` block */
+
+* {
+  font-family: "JetBrainsMono NF", monospace;
+  font-weight: 500;
+  font-size: 13pt;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+}
+
+/* Translucent #15161e; sway's `layer_effects "waybar"` blurs what's behind */
+window#waybar {
+  background-color: rgba(21, 22, 30, 0.96);
+  /* Glass cues: sheen fading down from the top and a lit top edge */
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.01) 45%,
+    rgba(255, 255, 255, 0)
+  );
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  color: #b1b1b1;
+}
+
+/* Workspaces */
+#workspaces button {
+  padding: 0 14px 0 6px;
+  margin: 0;
+  /* Tint, not a solid: lands on #1a1b26 over the bar without adding opacity */
+  background-color: rgba(192, 202, 245, 0.03);
+  color: #565f89;
+}
+
+/* No icons to make room for, so keep the number centred */
+#workspaces button.empty {
+  padding: 0 6px;
+}
+
+/* Shown on another output */
+#workspaces button.visible {
+  background-color: rgba(192, 202, 245, 0.03);
+  color: #a9b1d6;
+}
+
+#workspaces button.focused {
+  background-color: rgba(192, 202, 245, 0.12);
+  color: #c0caf5;
+}
+
+#workspaces button.urgent {
+  background-color: #f7768e;
+  color: #15161e;
+}
+
+#workspaces button:hover {
+  box-shadow: none;
+  text-shadow: none;
+  background-image: none;
+}
+
+/* Binding mode indicator (swaybar defaults) */
+#mode {
+  padding: 0 6px;
+  background-color: #900000;
+  color: #ffffff;
+  border: 1px solid #2f343a;
+}
+
+/* Status blocks, separated by a thin line */
+#custom-kernel,
+#temperature,
+#disk,
+#cpu,
+#memory,
+#battery,
+#backlight,
+#wireplumber,
+#clock {
+  padding: 0 4px;
+  margin: 4px 0;
+  border-right: 1px solid #414868;
+}
+
+/* Kernel icon is a colour emoji, so no text colour applies. The emoji has
+   its own side spacing, so the block padding is dropped to keep gaps even. */
+#custom-kernel {
+  padding: 0;
+}
+
+/* CPU / memory usage colours (states: value >= threshold) */
+#cpu.c0,
+#memory.c0 {
+  color: #00ff00;
+}
+#cpu.c10,
+#memory.c10 {
+  color: #bfff00;
+}
+#cpu.c25,
+#memory.c25 {
+  color: #ffff00;
+}
+#cpu.c50,
+#memory.c50 {
+  color: #ffbf00;
+}
+#cpu.c60,
+#memory.c60 {
+  color: #ff8000;
+}
+#cpu.c70,
+#memory.c70 {
+  color: #ff0000;
+}
+
+/* Disk usage colours (states: percentage used >= threshold) */
+#disk.d0 {
+  color: #00ff00;
+}
+#disk.d50 {
+  color: #bfff00;
+}
+#disk.d65 {
+  color: #ffff00;
+}
+#disk.d75 {
+  color: #ffbf00;
+}
+#disk.d85 {
+  color: #ff8000;
+}
+#disk.d92 {
+  color: #ff0000;
+}
+
+/* Battery colours (states: capacity <= threshold) */
+#battery {
+  color: #00ff00;
+}
+#battery.lt80 {
+  color: #bfff00;
+}
+#battery.lt50 {
+  color: #ffff00;
+}
+#battery.lt30 {
+  color: #ff8000;
+}
+#battery.lt10 {
+  color: #ff0000;
+}
+/* Must come after the capacity states so plugged-in wins */
+#battery.charging,
+#battery.plugged,
+#battery.full {
+  color: #7dd3fc;
+}
+
+#backlight {
+  color: orange;
+}
+
+/* Volume: green normally, yellow from 71%, red when boosted past 100% */
+#wireplumber {
+  color: #9ece6a;
+}
+#wireplumber.high {
+  color: #e0af68;
+}
+#wireplumber.over {
+  color: #f7768e;
+}
+/* Must come after the level states so muted wins */
+#wireplumber.muted {
+  color: #808080;
+}
+
+#clock {
+  color: #b0b0b2;
+  margin-right: 6px;
+}
+/* Date and time read as one block: no separator or gap between them */
+#clock.date {
+  color: #c0caf5;
+  padding-right: 0;
+  margin-right: 0;
+  border-right: none;
+}
+#clock.time {
+  color: #c0caf5;
+  padding-left: 0;
+}
+
+/* Bluetooth sits beside the tray icons, so no separator */
+#bluetooth {
+  padding: 0 10px 0 0px;
+  color: #b0b0b2;
+}
+#bluetooth.off,
+#bluetooth.disabled {
+  color: #808080;
+}
+
+#tray {
+  padding: 0 6px 0 0px;
+}
+/* Tray icons are images, so CSS can't recolour them; dim to match #a9b1d6 */
+#tray image {
+  opacity: 0.77;
+}
+
+/* Hover popups: flat panel, no border. The GTK theme would otherwise add its
+   own outline and shadow. */
+tooltip {
+  background-color: #15161e;
+  border: none;
+  box-shadow: none;
+}
+tooltip label {
+  color: #b1b1b1;
+  font-size: 11pt;
+  font-weight: 400;
+  padding: 4px;
+}
+
+.modules-right {
+  background-color: rgba(192, 202, 245, 0.03);
+}

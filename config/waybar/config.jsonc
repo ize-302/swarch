@@ -1,0 +1,184 @@
+{
+	// Glyphs are written as \u escapes so editors can't mangle Nerd Font codepoints.
+	"layer": "top",
+	"position": "bottom",
+	"spacing": 0,
+	"modules-left": ["sway/workspaces", "sway/mode"],
+	"modules-right": [
+		"custom/kernel",
+		"temperature",
+		"disk",
+		"cpu",
+		"memory",
+		"battery",
+		"backlight",
+		"wireplumber",
+		"clock#date",
+		"clock#time",
+		"tray",
+		"bluetooth"
+	],
+
+	// {windows} adds one icon per open window, picked by app id below
+	// (Nerd Font glyphs; anything unlisted gets the generic window icon).
+	// Each icon has thin spaces (U+2009) around it, two before and one after, so an empty workspace
+	// shows the number alone.
+	"sway/workspaces": {
+		"disable-scroll": false,
+		"all-outputs": false,
+		"format": "{name}{windows}",
+		"format-window-separator": "",
+		"window-rewrite-default": "   ",
+		"window-rewrite": {
+			"class<Alacritty>": "   ",
+			"class<zen.*|firefox.*|librewolf>": "   ",
+			"class<google-chrome.*|chromium.*>": "   ",
+			"class<[Tt]hunar>": "   ",
+			"class<com.obsproject.Studio>": "   ",
+			"class<mpv|vlc>": "   ",
+			"class<blueman-manager>": "   ",
+			"class<nm-connection-editor>": "   "
+		}
+	},
+
+	// temperature has no `states`, so the colour lives in the icon.
+	// Icon index = temp / (critical-threshold / 20) = temp / 5:
+	// <50, 50-54, 55-59, 60-64, 65-69, >=70.
+	"temperature": {
+		"thermal-zone": 0,
+		"critical-threshold": 100,
+		"interval": 1,
+		"format": " {icon} {temperatureC}ºC </span>",
+		"format-icons": [
+			"<span color='#00FF00'>", "<span color='#00FF00'>",
+			"<span color='#00FF00'>", "<span color='#00FF00'>",
+			"<span color='#00FF00'>", "<span color='#00FF00'>",
+			"<span color='#00FF00'>", "<span color='#00FF00'>",
+			"<span color='#00FF00'>", "<span color='#00FF00'>",
+			"<span color='#bfff00'>",
+			"<span color='#ffff00'>",
+			"<span color='#ffbf00'>",
+			"<span color='#ff8000'>",
+			"<span color='#ff0000'>", "<span color='#ff0000'>",
+			"<span color='#ff0000'>", "<span color='#ff0000'>",
+			"<span color='#ff0000'>", "<span color='#ff0000'>"
+		],
+		"tooltip": false
+	},
+
+	// Percentage used of the root filesystem. Hover shows used, free and total
+	// in GiB (same units as `df -h`).
+	// States match on percentage used; style.css colours them.
+	"disk": {
+		"path": "/",
+		"interval": 30,
+		"unit": "GiB",
+		"format": "  {percentage_used}% ",
+		"states": { "d0": 0, "d50": 50, "d65": 65, "d75": 75, "d85": 85, "d92": 92 },
+		"tooltip-format": "Used  {specific_used:0.0f}G\nFree  {specific_free:0.0f}G\nTotal {specific_total:0.0f}G"
+	},
+
+	// Colours come from the state classes in style.css.
+	"cpu": {
+		"interval": 1,
+		"format": "  {usage}% ",
+		"states": { "c0": 0, "c10": 10, "c25": 25, "c50": 50, "c60": 60, "c70": 70 },
+		"tooltip": false
+	},
+
+	// Hover shows the actual amounts, in GiB.
+	"memory": {
+		"interval": 1,
+		"format": "  {percentage}% ",
+		"states": { "c0": 0, "c10": 10, "c25": 25, "c50": 50, "c60": 60, "c70": 70 },
+		"tooltip-format": "RAM  {used:0.1f} / {total:0.1f} GiB\nFree {avail:0.1f} GiB\nSwap {swapUsed:0.1f} / {swapTotal:0.1f} GiB"
+	},
+
+	// Battery states match when capacity <= value.
+	// Time remaining is shown on hover only.
+	"battery": {
+		"interval": 1,
+		"states": { "lt10": 9, "lt30": 29, "lt50": 49, "lt80": 79, "lt100": 99 },
+		"format": " {icon} {capacity}% ",
+		"format-time": "{H}h{M}m",
+		"format-icons": {
+			"charging": "󰂄",
+			"plugged": "󰂄",
+			"full": "󰂄",
+			"not charging": "󰂄",
+			"lt10": "󰁻",
+			"lt30": "󰁼",
+			"lt50": "󰁾",
+			"lt80": "󰂀",
+			"default": "󰁹"
+		},
+		"tooltip-format": "{timeTo}",
+		"tooltip-format-discharging": "{time} left",
+		"tooltip-format-charging": "{time} until full"
+	},
+
+	"backlight": {
+		"format": " ☀️{percent}% ",
+		"tooltip": false
+	},
+
+	// Above 50% switches to the loud icon. Only the highest matching state
+	// applies, so high/over repeat the loud format; style.css colours them.
+	// Click toggles mute.
+	"wireplumber": {
+		"states": { "loud": 51, "high": 71, "over": 101 },
+		"format": "  {volume}% ",
+		"format-loud": "   {volume}% ",
+		"format-high": "   {volume}% ",
+		"format-over": "   {volume}% ",
+		"format-muted": "  {volume}% ",
+		"on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+		"tooltip": false
+	},
+
+	// The script prints the penguin.
+	// Hover shows the kernel version 
+	"custom/kernel": {
+ 		"exec": "printf '{\"tooltip\": \"Linux Kernel %s\"}\\n' \"$(uname -r)\"",
+		"return-type": "json",
+		"interval": "once",
+		"format": " 🐧 "
+	},
+
+	// Date and time are separate modules so style.css can colour each
+	"clock#date": {
+		"format": " {:%a %d %b} ·",
+		"interval": 60,
+		"tooltip": false
+	},
+
+	"clock#time": {
+		"format": " {:%H:%M} ",
+		"interval": 10,
+		"tooltip": false
+	},
+
+	// Replaces blueman-applet. Hover lists connected devices;
+	// click toggles power (unblocking rfkill if needed), right click opens
+	// the manager for pairing.
+	"bluetooth": {
+		"format": "󰂯",
+		"format-connected": "󰂱",
+		"format-off": "󰂲",
+		"format-disabled": "󰂲",
+		"format-no-controller": "",
+		"tooltip-format": "{controller_alias}: on, no devices connected",
+		"tooltip-format-off": "Bluetooth off",
+		"tooltip-format-disabled": "Bluetooth disabled",
+		"tooltip-format-connected": "{controller_alias}: {num_connections} connected\n{device_enumerate}",
+		"tooltip-format-enumerate-connected": "{device_alias}",
+		"tooltip-format-enumerate-connected-battery": "{device_alias}  {device_battery_percentage}%",
+		"on-click": "if rfkill list bluetooth | grep -q 'Soft blocked: yes'; then rfkill unblock bluetooth; sleep 1; bluetoothctl power on; elif bluetoothctl show | grep -q 'Powered: yes'; then bluetoothctl power off; else bluetoothctl power on; fi",
+		"on-click-right": "blueman-manager"
+	},
+
+	"tray": {
+		"icon-size": 21,
+		"spacing": 4
+	}
+}
