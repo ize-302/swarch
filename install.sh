@@ -8,7 +8,7 @@ repo=$PWD
 
 packages=(
   # bar, menus and lock screen, terminal, notifications
-  waybar quickshell alacritty dunst libnotify
+  waybar quickshell alacritty tmux dunst libnotify
   # session
   swayidle swaylock swaybg polkit polkit-gnome xorg-xwayland
   xdg-desktop-portal-wlr xdg-desktop-portal-gtk
