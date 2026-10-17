@@ -12,6 +12,26 @@ notifications and the notification centre, a date panel with a calendar and
 a pomodoro timer, the volume and caps lock popups, the lock screen and an
 SDDM login theme.
 
+![The app launcher open over the desktop, with the bar along the bottom](docs/screenshots/launcher.webp)
+
+![The sound panel from the bar's speaker, with the playing song's controls above the output and input volumes](docs/screenshots/sound-panel.webp)
+
+![The scratchpad menu along the bottom, showing a preview of each window in the scratchpad](docs/screenshots/scratchpad.webp)
+
+![The date panel from the bar's clock: a pomodoro timer above a calendar of the month](docs/screenshots/date-panel.webp)
+
+![The network panel from the bar's signal icon: a Wi-Fi switch above the networks in range, saved ones marked](docs/screenshots/network-panel.webp)
+
+![The Bluetooth panel from the bar's Bluetooth icon: a switch and a search button above the paired devices, with their battery](docs/screenshots/bluetooth-panel.webp)
+
+![The notification centre from the bar's bell: a do-not-disturb switch and Clear All above the notifications, newest first, with their action buttons](docs/screenshots/notification-center.webp)
+
+![The key bindings sheet (Super+F1): every shortcut from the sway config, grouped and searchable](docs/screenshots/keybind-menu.webp)
+
+![The clipboard history (Super+C): a searchable list of copied text and images, images with their type, size and dimensions](docs/screenshots/clipboard-menu.webp)
+
+![The power menu (Super+Esc): Lock, Log Out, Sleep, Restart and Shut Down](docs/screenshots/power-menu.webp)
+
 Arch only: SwayFX comes from the AUR.
 
 ## Layout
