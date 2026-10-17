@@ -212,6 +212,10 @@ if [ -d /usr/share/sddm/themes ] || [ -n "$dry" ]; then
   # Somewhere outside $HOME that SDDM can read, for ~/.local/bin/wallpaper-rotate
   # to copy the current wallpaper to
   run sudo install -d -m755 -o "$USER" -g "$(id -gn)" /var/lib/sddm-wallpaper
+  # Until the first sway login puts a wallpaper there, the default
+  if [ ! -e /var/lib/sddm-wallpaper/current ]; then
+    run cp home/.local/share/swarch/default-wallpaper.jpg /var/lib/sddm-wallpaper/current
+  fi
 else
   note "SDDM isn't installed, so the login theme was skipped."
 fi
