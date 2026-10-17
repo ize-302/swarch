@@ -1,7 +1,8 @@
 #!/bin/bash
 # swarch's installer, for Arch Linux. Installs the packages swarch needs
-# (swayfx from the AUR through paru or yay), links config/ into ~/.config and
-# home/ into $HOME, and sets up the SDDM login screen.
+# (swayfx from the AUR through paru or yay, setting up paru if neither is
+# there), links config/ into ~/.config and home/ into $HOME, and sets up the
+# SDDM login screen.
 #
 #   ./install.sh             install
 #   ./install.sh --dry-run   say what it would do, change nothing
@@ -21,7 +22,7 @@ for arg in "$@"; do
   --backup) backup=1 ;;
   --no-packages) packages= ;;
   -h | --help)
-    sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
     ;;
   *)
@@ -96,16 +97,24 @@ if [ -n "$packages" ]; then
   done
   if [ ${#aur_missing[@]} -gt 0 ]; then
     helper=$(command -v paru || command -v yay || true)
-    if [ -n "$helper" ]; then
-      say "Installing from the AUR with $(basename "$helper"): ${aur_missing[*]}"
-      run "$helper" -S --needed "${aur_missing[@]}"
-    else
-      note "${aur_missing[*]} comes from the AUR, and there's no paru or yay to install it with."
-      note "Install one (https://github.com/Morganamilo/paru), or build it by hand:"
-      note "  git clone https://aur.archlinux.org/swayfx.git && cd swayfx && makepkg -si"
-      note "then run this again."
-      [ -n "$dry" ] || exit 1
+    if [ -z "$helper" ]; then
+      # swayfx needs scenefx, also from the AUR, which makepkg alone can't
+      # fetch; so set up paru first. paru-bin is paru already built, so
+      # this doesn't pull in Rust and compile it
+      say "No paru or yay: installing paru (paru-bin from the AUR) to get ${aur_missing[*]}"
+      run sudo pacman -S --needed base-devel git
+      build=$(mktemp -d)
+      run git clone https://aur.archlinux.org/paru-bin.git "$build/paru-bin"
+      if [ -n "$dry" ]; then
+        echo "    would run: (cd $build/paru-bin && makepkg -si)"
+      else
+        (cd "$build/paru-bin" && makepkg -si)
+      fi
+      rm -rf "$build"
+      helper=paru
     fi
+    say "Installing from the AUR with $(basename "$helper"): ${aur_missing[*]}"
+    run "$helper" -S --needed "${aur_missing[@]}"
   else
     say "Packages from the AUR: all installed."
   fi

@@ -28,10 +28,10 @@ files:
 ## Needs
 
 - Arch Linux, logged in as your own user with sudo.
-- [paru](https://github.com/Morganamilo/paru) or
-  [yay](https://github.com/Jguer/yay), for `swayfx` from the AUR. Without one,
-  the installer stops and shows how to build it by hand.
 
+`swayfx` comes from the AUR, through [paru](https://github.com/Morganamilo/paru)
+or [yay](https://github.com/Jguer/yay). If you have neither, `install.sh` sets
+up paru first (the prebuilt `paru-bin`, with `base-devel` and `git`).
 Everything else `install.sh` installs itself from the Arch repos. The list,
 grouped by what uses each package, is at the top of `install.sh`. It covers:
 
