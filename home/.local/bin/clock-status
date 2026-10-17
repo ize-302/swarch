@@ -1,0 +1,11 @@
+#!/bin/sh
+# ~/.local/bin/clock-status
+# The bar's clock (waybar's custom/clock), as JSON: the time over the date
+# ("19:34" over "Thu Oct 15"), small enough that the two lines fit the bar's
+# height. Hover shows the date.
+
+# Both lines at the same line height: anything taller pushes the date down
+time="<span size='10pt' line_height='0.85' weight='600'>$(date '+%H:%M')</span>"
+day="<span size='7.5pt' alpha='80%' line_height='0.85'>$(date '+%a %b %-d')</span>"
+printf '{"text": "%s\\n%s", "tooltip": "%s"}\n' \
+	"$time" "$day" "$(date '+%A, %d %B %Y')"

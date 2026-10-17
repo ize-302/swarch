@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+# ~/.local/bin/bar-anchor <x> <bar-top> <bar-height>
+# The middle of the bar module at x (global layout coordinates), for the
+# launcher's popups (~/.config/quickshell/launcher) to point their arrow at:
+# waybar doesn't say where its modules are, and a click can land anywhere in
+# a module's padding. Grabs the bar around x with grim, finds the glyphs and
+# text (pixels well above the bar's dark background) in columns, joins the
+# ones close enough to be one module, and prints the middle of the one at or
+# nearest x. Prints x unchanged when there's nothing near.
+import subprocess
+import sys
+
+# How far either side of x to look, how close two runs of ink have to be to
+# count as one module (the space between a glyph and its number), and how far
+# the module may be from x
+REACH = 48
+JOIN = 11
+NEAREST = 24
+
+
+def main():
+    x, top, height = (int(float(value)) for value in sys.argv[1:4])
+    left = max(0, x - REACH)
+    width = REACH * 2
+    result = subprocess.run(["grim", "-t", "ppm", "-g", f"{left},{top} {width}x{height}", "-"], capture_output=True)
+    data = result.stdout
+    if result.returncode or not data.startswith(b"P6"):
+        print(x)
+        return
+
+    # P6 header: magic, width, height, max value, then RGB bytes
+    fields, at = [], 2
+    while len(fields) < 3:
+        while data[at:at + 1].isspace():
+            at += 1
+        if data[at:at + 1] == b"#":
+            at = data.index(b"\n", at)
+            continue
+        end = at
+        while not data[end:end + 1].isspace():
+            end += 1
+        fields.append(int(data[at:end]))
+        at = end
+    w, h = fields[0], fields[1]
+    pixels = data[at + 1:]
+
+    def brightness(px, py):
+        i = (py * w + px) * 3
+        return max(pixels[i], pixels[i + 1], pixels[i + 2])
+
+    # The background: the darkest of the middle row
+    middle = h // 2
+    background = min(brightness(px, middle) for px in range(w))
+    rows = range(h // 5, h - h // 5)
+    ink = [any(brightness(px, py) > background + 60 for py in rows) for px in range(w)]
+
+    runs, start = [], None
+    for px, on in enumerate(ink + [False]):
+        if on and start is None:
+            start = px
+        elif not on and start is not None:
+            if runs and start - runs[-1][1] <= JOIN:
+                runs[-1][1] = px - 1
+            else:
+                runs.append([start, px - 1])
+            start = None
+
+    target = x - left
+    best = None
+    for a, b in runs:
+        distance = 0 if a <= target <= b else min(abs(target - a), abs(target - b))
+        if distance <= NEAREST and (best is None or distance < best[0]):
+            best = (distance, (a + b) / 2)
+    print(round(left + best[1]) if best else x)
+
+
+if __name__ == "__main__":
+    main()

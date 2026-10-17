@@ -1,0 +1,4 @@
+# Replaced by Quickshell with a link to a generated file
+config/quickshell/*/.qmlls.ini
+# Your own sway settings (see the end of config/sway/config)
+config/sway/config.d/

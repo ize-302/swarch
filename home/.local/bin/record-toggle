@@ -1,0 +1,20 @@
+#!/bin/bash
+# ~/.local/bin/record-toggle
+if pgrep -x wf-recorder >/dev/null; then
+	pkill -INT wf-recorder
+	notify-send "Recording saved"
+else
+	audio_args=()
+	case "$1" in
+	-s | --sound)
+		audio_args=(--audio)
+		;;
+	-d | --desktop)
+		default_sink="$(pactl get-default-sink)"
+		audio_args=(--audio="${default_sink}.monitor")
+		;;
+	esac
+
+	notify-send "Select area to record"
+	wf-recorder -g "$(slurp)" -c libx264rgb "${audio_args[@]}" -f ~/Videos/rec-$(date +%Y%m%d-%H%M%S).mp4
+fi

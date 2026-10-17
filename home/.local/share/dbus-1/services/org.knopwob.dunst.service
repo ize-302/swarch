@@ -1,0 +1,6 @@
+# Stops D-Bus starting dunst when nothing shows notifications, e.g. while
+# the Quickshell daemon (config/quickshell/launcher), which shows them now,
+# restarts. Same name as dunst's own file, which this one overrides.
+[D-BUS Service]
+Name=org.freedesktop.Notifications
+Exec=/usr/bin/false

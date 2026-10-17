@@ -1,0 +1,268 @@
+/* Colours taken from the sway `bar { colors { ... } }` block */
+
+* {
+  font-family: "JetBrainsMono NF", monospace;
+  font-weight: 500;
+  font-size: 13pt;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+}
+
+/* Acrylic, like the Windows 11 taskbar: a neutral dark tint, see-through
+   enough that sway's `layer_effects "waybar"` blur of the wallpaper shows,
+   and a faint top hairline */
+window#waybar {
+  background-color: rgba(32, 32, 32, 0.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+/* Workspaces */
+#workspaces button {
+  padding: 0 14px 0 6px;
+  margin: 0;
+  /* Tint, not a solid, so the bar's glass shows through */
+  background-color: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* No icons to make room for, so keep the number centred */
+#workspaces button.empty {
+  padding: 0 6px;
+}
+
+/* Shown on another output */
+#workspaces button.visible {
+  background-color: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+#workspaces button.focused {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+#workspaces button.urgent {
+  background-color: #f7768e;
+  color: #15161e;
+}
+
+#workspaces button:hover {
+  box-shadow: none;
+  text-shadow: none;
+  background-image: none;
+}
+
+/* Scratchpad dots: one more workspace button, for the windows put away */
+#scratchpad {
+  padding: 0 8px;
+  background-color: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.6);
+}
+#scratchpad:hover {
+  color: #ffffff;
+}
+
+/* Binding mode indicator (swaybar defaults) */
+/* Bright red, so resize mode stands out */
+#mode {
+  padding: 0 6px;
+  background-color: #ff5555;
+  color: #15161e;
+}
+
+/* Every module on the right the same distance apart, with no separators:
+   12px each side (formats have no spaces at their ends). The tray's icons
+   are closer, 12px apart (config.jsonc), as one group. */
+#tray,
+#temperature,
+#disk,
+#cpu,
+#memory,
+#battery,
+#backlight,
+#custom-volume,
+#custom-pomodoro,
+#network,
+#bluetooth,
+#custom-notifications,
+#custom-clock,
+#custom-kernel {
+  padding: 0 12px;
+}
+
+/* CPU / memory usage colours (states: value >= threshold) */
+#cpu.c0,
+#memory.c0 {
+  color: #00ff00;
+}
+#cpu.c10,
+#memory.c10 {
+  color: #bfff00;
+}
+#cpu.c25,
+#memory.c25 {
+  color: #ffff00;
+}
+#cpu.c50,
+#memory.c50 {
+  color: #ffbf00;
+}
+#cpu.c60,
+#memory.c60 {
+  color: #ff8000;
+}
+#cpu.c70,
+#memory.c70 {
+  color: #ff0000;
+}
+
+/* Disk usage colours (states: percentage used >= threshold) */
+#disk.d0 {
+  color: #00ff00;
+}
+#disk.d50 {
+  color: #bfff00;
+}
+#disk.d65 {
+  color: #ffff00;
+}
+#disk.d75 {
+  color: #ffbf00;
+}
+#disk.d85 {
+  color: #ff8000;
+}
+#disk.d92 {
+  color: #ff0000;
+}
+
+/* Battery colours (states: capacity <= threshold) */
+#battery {
+  color: #00ff00;
+}
+#battery.lt80 {
+  color: #bfff00;
+}
+#battery.lt50 {
+  color: #ffff00;
+}
+#battery.lt30 {
+  color: #ff8000;
+}
+#battery.lt10 {
+  color: #ff0000;
+}
+/* Must come after the capacity states so plugged-in wins */
+#battery.charging,
+#battery.plugged,
+#battery.full {
+  color: #7dd3fc;
+}
+
+#backlight {
+  color: orange;
+}
+
+/* Volume: the clock's colour at every level, red when boosted past 100%.
+   Faint when muted. */
+#custom-volume {
+  color: #ffffff;
+}
+#custom-volume.over {
+  color: #f7768e;
+}
+/* Must come after the level states so muted wins */
+#custom-volume.muted {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Pomodoro: white while focusing, green on a break, faint while paused */
+#custom-pomodoro {
+  color: #ffffff;
+}
+#custom-pomodoro.break {
+  color: #30d158;
+}
+#custom-pomodoro.paused {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* The bell, which opens the notification centre; faint during do not
+   disturb */
+#custom-notifications {
+  color: #ffffff;
+}
+#custom-notifications.dnd {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* The time, which opens the calendar and pomodoro timer; brighter under the
+   mouse, like the icons before it */
+#custom-clock {
+  color: #ffffff;
+  font-size: 16px;
+  /* A short divider between it and the bell, half the bar's height: a 1px
+     background line, as a border or margin would make the bar taller */
+  background-image: linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25));
+  background-size: 1px 50%;
+  background-position: left center;
+  background-repeat: no-repeat;
+}
+#custom-clock:hover {
+  color: #ffffff;
+}
+
+/* Wi-Fi and bluetooth, in the time's colour; grey when off or
+   disconnected */
+
+#bluetooth {
+  color: #ffffff;
+}
+#network {
+  color: #ffffff;
+}
+#network.disconnected,
+#network.linked,
+#network.disabled {
+  color: #808080;
+}
+#network:hover,
+#bluetooth:hover {
+  color: #ffffff;
+}
+#bluetooth.off,
+#bluetooth.disabled {
+  color: #808080;
+}
+
+/* Tray icons are images, so CSS can't recolour them; dim to match #a9b1d6 */
+#tray {
+  background-color: rgba(192, 202, 245, 0.06);
+}
+
+/* Hover popups, like the launcher's menus and cards
+   (config/quickshell/launcher/Theme.qml) but solid: their #202020, a faint
+   white edge, 4px corners, and their font. No shadow, which the GTK theme
+   would otherwise add. */
+tooltip {
+  background-color: #202020;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+  border-radius: 4px;
+  /* The theme's own padding (adw-gtk3: 6px 10px here, and 4px on
+     everything inside), on top of the label's; and its text shadow */
+  padding: 0;
+  text-shadow: none;
+}
+tooltip * {
+  padding: 0;
+}
+tooltip label {
+  color: #ffffff;
+  font-family: "Adwaita Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 3px 6px;
+}

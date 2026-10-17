@@ -1,0 +1,15 @@
+#!/bin/sh
+# Installed to /etc/sddm/ by install.sh, run as root before the greeter shows.
+# X starts every output at 0,0, so with a second display the greeters overlap
+# on the larger screen. Lay the outputs out side by side instead.
+command -v xrandr >/dev/null || exit 0
+
+prev=
+for out in $(xrandr --query | awk '$2 == "connected" { print $1 }'); do
+  if [ -z "$prev" ]; then
+    xrandr --output "$out" --auto --primary
+  else
+    xrandr --output "$out" --auto --right-of "$prev"
+  fi
+  prev=$out
+done

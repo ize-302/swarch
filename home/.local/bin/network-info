@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+# ~/.local/bin/network-info
+# What the launcher's control panel (~/.config/quickshell/launcher) can't get
+# from Quickshell about Wi-Fi, done with nmcli:
+#
+#   network-info show <ssid>             details of a network, as JSON
+#   network-info autoconnect <uuid> yes|no
+#   network-info join <ssid>             join a hidden network; the password
+#                                        (none for an open one) on stdin
+#   network-info password <ssid>         a saved network's new password, on
+#                                        stdin: saves it and connects
+#
+# show prints {"ssid", "uuid", "autoconnect", "connected", "device",
+# "security", "signal", "frequency", "rate", "ip", "gateway", "dns", "mac"};
+# whatever isn't known (not saved, not in range, not connected) is left out.
+import json
+import subprocess
+import sys
+
+
+def nmcli(*args, stdin=None):
+    result = subprocess.run(["nmcli", *args], capture_output=True, text=True, input=stdin)
+    return result.returncode, result.stdout, result.stderr
+
+
+def fields(line):
+    """Splits nmcli's terse output on ':' but not on '\\:'."""
+    parts, current, escaped = [], "", False
+    for char in line:
+        if escaped:
+            current += char
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif char == ":":
+            parts.append(current)
+            current = ""
+        else:
+            current += char
+    parts.append(current)
+    return parts
+
+
+def saved_connection(ssid):
+    """The saved connection for an SSID: (uuid, autoconnect), or None."""
+    _, out, _ = nmcli("-t", "-f", "UUID,TYPE,AUTOCONNECT", "connection", "show")
+    for line in out.splitlines():
+        uuid, kind, autoconnect = fields(line)[:3]
+        if kind != "802-11-wireless":
+            continue
+        _, setting, _ = nmcli("-g", "802-11-wireless.ssid", "connection", "show", uuid)
+        if setting.strip() == ssid:
+            return uuid, autoconnect == "yes"
+    return None
+
+
+def show(ssid):
+    info = {"ssid": ssid, "connected": False}
+
+    saved = saved_connection(ssid)
+    if saved:
+        info["uuid"], info["autoconnect"] = saved
+
+    # In range: signal, band and security from the last scan
+    _, out, _ = nmcli("-t", "-f", "IN-USE,SSID,SIGNAL,FREQ,RATE,SECURITY,DEVICE", "device", "wifi", "list", "--rescan", "no")
+    best = None
+    for line in out.splitlines():
+        in_use, name, signal, freq, rate, security, device = fields(line)[:7]
+        if name != ssid:
+            continue
+        entry = (in_use == "*", int(signal or 0), freq, rate, security, device)
+        if best is None or entry[:2] > best[:2]:
+            best = entry
+    if best:
+        in_use, signal, freq, rate, security, device = best
+        info.update(signal=signal, frequency=freq, rate=rate, security=security or "Open")
+        if in_use:
+            info.update(connected=True, device=device)
+
+    # Connected: the addresses
+    if info["connected"]:
+        _, out, _ = nmcli("-t", "-f", "GENERAL.HWADDR,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS", "device", "show", info["device"])
+        dns = []
+        for line in out.splitlines():
+            key, _, value = line.partition(":")
+            if key == "GENERAL.HWADDR":
+                info["mac"] = value
+            elif key.startswith("IP4.ADDRESS") and "ip" not in info:
+                info["ip"] = value.split("/")[0]
+            elif key == "IP4.GATEWAY" and value:
+                info["gateway"] = value
+            elif key.startswith("IP4.DNS"):
+                dns.append(value)
+        if dns:
+            info["dns"] = dns
+
+    print(json.dumps(info))
+
+
+def autoconnect(uuid, value):
+    code, _, err = nmcli("connection", "modify", uuid, "connection.autoconnect", value)
+    if code:
+        sys.exit(err.strip())
+
+
+def join(ssid):
+    password = sys.stdin.readline().rstrip("\n")
+    _, out, _ = nmcli("-t", "-f", "DEVICE,TYPE", "device")
+    device = next((fields(line)[0] for line in out.splitlines() if fields(line)[1] == "wifi"), None)
+    if device is None:
+        sys.exit("No Wi-Fi device")
+    # nmcli only takes the password as an argument; it's on the command line
+    # (and in `ps`) for the moment the join takes
+    args = ["device", "wifi", "connect", ssid, "ifname", device, "hidden", "yes"]
+    if password:
+        args += ["password", password]
+    code, out, err = nmcli(*args)
+    print(json.dumps({"ok": code == 0, "error": err.strip().removeprefix("Error: ")}))
+
+
+def password(ssid):
+    psk = sys.stdin.readline().rstrip("\n")
+    saved = saved_connection(ssid)
+    if saved is None:
+        print(json.dumps({"ok": False, "error": "Not a saved network"}))
+        return
+    uuid = saved[0]
+    # On the command line for a moment, like join's
+    code, _, err = nmcli("connection", "modify", uuid, "802-11-wireless-security.psk", psk)
+    if code == 0:
+        code, _, err = nmcli("connection", "up", uuid)
+    print(json.dumps({"ok": code == 0, "error": err.strip().removeprefix("Error: ")}))
+
+
+def main():
+    command, rest = (sys.argv[1], sys.argv[2:]) if len(sys.argv) > 1 else ("", [])
+    if command == "show" and len(rest) == 1:
+        show(rest[0])
+    elif command == "password" and len(rest) == 1:
+        password(rest[0])
+    elif command == "autoconnect" and len(rest) == 2 and rest[1] in ("yes", "no"):
+        autoconnect(*rest)
+    elif command == "join" and len(rest) == 1:
+        join(rest[0])
+    else:
+        sys.exit(__doc__ or "usage: network-info show <ssid> | autoconnect <uuid> yes|no | join <ssid>")
+
+
+if __name__ == "__main__":
+    main()

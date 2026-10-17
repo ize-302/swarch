@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+# ~/.local/bin/bluetooth-audio
+# A bluetooth audio device's profiles, for the launcher's control panel
+# (~/.config/quickshell/launcher): high-quality audio (A2DP) or the headset
+# mode with its mic (HSP/HFP), each in the codecs it offers. With pactl, as
+# Quickshell's PipeWire service doesn't have card profiles.
+#
+#   bluetooth-audio show <address>            {"card", "active", "profiles":
+#                                             [{"name", "label", "codec"}]},
+#                                             or {} if it has no audio
+#   bluetooth-audio set <address> <profile>
+import json
+import re
+import subprocess
+import sys
+
+
+def card(address):
+    result = subprocess.run(["pactl", "-f", "json", "list", "cards"], capture_output=True, text=True)
+    try:
+        cards = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+    wanted = address.upper()
+    for entry in cards:
+        props = entry.get("properties", {})
+        if props.get("api.bluez5.address", "").upper() == wanted or entry.get("name", "").upper().endswith(wanted.replace(":", "_")):
+            return entry
+    return None
+
+
+# "High Fidelity Playback (A2DP Sink, codec AAC)" -> ("High-quality audio", "AAC")
+def describe(name, description):
+    codec = re.search(r"codec ([^)]+)\)", description or "")
+    codec = codec.group(1) if codec else ""
+    if name.startswith("a2dp"):
+        return "High-quality audio", codec
+    if name.startswith("headset"):
+        return "Headset with mic", codec
+    return description or name, ""
+
+
+def show(address):
+    entry = card(address)
+    if entry is None:
+        print("{}")
+        return
+    profiles = []
+    for name, profile in entry.get("profiles", {}).items():
+        if name == "off" or not profile.get("available", True):
+            continue
+        label, codec = describe(name, profile.get("description", ""))
+        profiles.append({"name": name, "label": label, "codec": codec, "priority": profile.get("priority", 0)})
+    # High-quality first, then the headset modes; best codec first in each
+    profiles.sort(key=lambda profile: (not profile["name"].startswith("a2dp"), -profile["priority"]))
+    for profile in profiles:
+        del profile["priority"]
+    print(json.dumps({"card": entry["name"], "active": entry.get("active_profile", ""), "profiles": profiles}))
+
+
+def set_profile(address, profile):
+    entry = card(address)
+    if entry is None:
+        sys.exit("No audio for " + address)
+    subprocess.run(["pactl", "set-card-profile", entry["name"], profile], check=False)
+
+
+def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "show":
+        show(sys.argv[2])
+    elif len(sys.argv) == 4 and sys.argv[1] == "set":
+        set_profile(sys.argv[2], sys.argv[3])
+    else:
+        sys.exit("usage: bluetooth-audio show <address> | set <address> <profile>")
+
+
+if __name__ == "__main__":
+    main()

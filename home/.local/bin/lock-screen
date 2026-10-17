@@ -1,0 +1,14 @@
+#!/bin/bash
+# ~/.local/bin/lock-screen
+# Locks the session with the Quickshell locker (~/.config/quickshell/lock) and
+# returns once it is running. Falls back to swaylock if Quickshell is missing
+# or the locker fails to start.
+fallback=(swaylock -f -c 000000)
+
+if command -v qs >/dev/null && [ -f ~/.config/quickshell/lock/shell.qml ]; then
+	# Already locked
+	pgrep -u "$UID" -f 'qs -c lock' >/dev/null && exit 0
+	qs -c lock -d && exit 0
+fi
+
+exec "${fallback[@]}"

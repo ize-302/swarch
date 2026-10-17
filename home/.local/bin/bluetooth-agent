@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+# ~/.local/bin/bluetooth-agent
+# BlueZ pairing agent for the Quickshell launcher
+# (~/.config/quickshell/launcher/BluetoothAgent.qml), which runs it and
+# shows its prompts. Registers as the default agent and passes each
+# request on as a line of JSON on stdout:
+#
+#   {"id": 3, "type": "confirm", "device": "Pixel 8", "passkey": "123456"}
+#
+# Types: "confirm" (does the code match?), "authorize" (allow pairing with
+# no code), "pin" and "passkey" (type what the device shows), "service"
+# (allow a device that isn't trusted to connect), and "display-pin" and
+# "display-passkey" (type this code on the device), which need no answer.
+# "cancel" takes a prompt away.
+#
+# Answers come back on stdin, one per line: "<id> yes [value]" or
+# "<id> no". BlueZ gives up on a request after about 30 seconds.
+import json
+import sys
+
+import dbus
+import dbus.mainloop.glib
+import dbus.service
+from gi.repository import GLib
+
+BUS_NAME = "org.bluez"
+AGENT_PATH = "/org/quickshell/bluetooth_agent"
+# Can show a code and take one typed in: every kind of pairing works
+CAPABILITY = "KeyboardDisplay"
+
+
+class Rejected(dbus.DBusException):
+    _dbus_error_name = "org.bluez.Error.Rejected"
+
+
+class Canceled(dbus.DBusException):
+    _dbus_error_name = "org.bluez.Error.Canceled"
+
+
+def send(message):
+    print(json.dumps(message), flush=True)
+
+
+class Agent(dbus.service.Object):
+    def __init__(self, bus):
+        super().__init__(bus, AGENT_PATH)
+        self.bus = bus
+        self.next_id = 0
+        # id -> (reply, error, type), for the requests waiting on an answer
+        self.pending = {}
+
+    def device(self, path):
+        """The device's name, else its address, for the prompt."""
+        try:
+            props = dbus.Interface(self.bus.get_object(BUS_NAME, path), "org.freedesktop.DBus.Properties")
+            return str(props.Get("org.bluez.Device1", "Alias"))
+        except dbus.DBusException:
+            return str(path).rsplit("dev_", 1)[-1].replace("_", ":")
+
+    def trusted(self, path):
+        try:
+            props = dbus.Interface(self.bus.get_object(BUS_NAME, path), "org.freedesktop.DBus.Properties")
+            return bool(props.Get("org.bluez.Device1", "Trusted"))
+        except dbus.DBusException:
+            return False
+
+    def ask(self, kind, path, reply, error, **extra):
+        self.next_id += 1
+        self.pending[self.next_id] = (reply, error, kind)
+        send({"id": self.next_id, "type": kind, "device": self.device(path), **extra})
+
+    def answer(self, line):
+        parts = line.split(maxsplit=2)
+        if len(parts) < 2 or not parts[0].isdigit():
+            return
+        request = self.pending.pop(int(parts[0]), None)
+        if request is None:
+            return
+        reply, error, kind = request
+        if parts[1] != "yes":
+            error(Rejected("Rejected by the user"))
+        elif kind == "pin":
+            reply(dbus.String(parts[2] if len(parts) > 2 else ""))
+        elif kind == "passkey":
+            try:
+                reply(dbus.UInt32(int(parts[2])))
+            except (IndexError, ValueError):
+                error(Rejected("Not a passkey"))
+        else:
+            reply()
+
+    @dbus.service.method("org.bluez.Agent1", in_signature="", out_signature="")
+    def Release(self):
+        pass
+
+    @dbus.service.method("org.bluez.Agent1", in_signature="o", out_signature="s", async_callbacks=("reply", "error"))
+    def RequestPinCode(self, device, reply, error):
+        self.ask("pin", device, reply, error)
+
+    @dbus.service.method("org.bluez.Agent1", in_signature="o", out_signature="u", async_callbacks=("reply", "error"))
+    def RequestPasskey(self, device, reply, error):
+        self.ask("passkey", device, reply, error)
+
+    @dbus.service.method("org.bluez.Agent1", in_signature="os", out_signature="")
+    def DisplayPinCode(self, device, pincode):
+        send({"id": 0, "type": "display-pin", "device": self.device(device), "passkey": str(pincode)})
+
+    @dbus.service.method("org.bluez.Agent1", in_signature="ouq", out_signature="")
+    def DisplayPasskey(self, device, passkey, entered):
+        send({"id": 0, "type": "display-passkey", "device": self.device(device), "passkey": f"{int(passkey):06d}", "entered": int(entered)})
+
+    @dbus.service.method("org.bluez.Agent1", in_signature="ou", out_signature="", async_callbacks=("reply", "error"))
+    def RequestConfirmation(self, device, passkey, reply, error):
+        self.ask("confirm", device, reply, error, passkey=f"{int(passkey):06d}")
+
+    @dbus.service.method("org.bluez.Agent1", in_signature="o", out_signature="", async_callbacks=("reply", "error"))
+    def RequestAuthorization(self, device, reply, error):
+        self.ask("authorize", device, reply, error)
+
+    # A paired, trusted device reconnecting is let in without asking
+    @dbus.service.method("org.bluez.Agent1", in_signature="os", out_signature="", async_callbacks=("reply", "error"))
+    def AuthorizeService(self, device, uuid, reply, error):
+        if self.trusted(device):
+            reply()
+        else:
+            self.ask("service", device, reply, error)
+
+    # BlueZ gave up (the device cancelled, or it timed out)
+    @dbus.service.method("org.bluez.Agent1", in_signature="", out_signature="")
+    def Cancel(self):
+        for reply, error, kind in self.pending.values():
+            error(Canceled("Canceled"))
+        self.pending.clear()
+        send({"id": 0, "type": "cancel"})
+
+
+def register(bus):
+    try:
+        manager = dbus.Interface(bus.get_object(BUS_NAME, "/org/bluez"), "org.bluez.AgentManager1")
+        manager.RegisterAgent(AGENT_PATH, CAPABILITY)
+        manager.RequestDefaultAgent(AGENT_PATH)
+        print("bluetooth-agent: registered", file=sys.stderr, flush=True)
+    except dbus.DBusException as exception:
+        print(f"bluetooth-agent: couldn't register: {exception}", file=sys.stderr, flush=True)
+
+
+def main():
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    bus = dbus.SystemBus()
+    agent = Agent(bus)
+
+    # Again whenever bluetoothd (re)starts
+    def owner_changed(name, old, new):
+        if name == BUS_NAME and new:
+            register(bus)
+
+    bus.add_signal_receiver(owner_changed, signal_name="NameOwnerChanged", dbus_interface="org.freedesktop.DBus", arg0=BUS_NAME)
+    register(bus)
+
+    loop = GLib.MainLoop()
+
+    def read(source, condition):
+        line = sys.stdin.readline()
+        if not line:
+            # The launcher went away
+            loop.quit()
+            return False
+        agent.answer(line.strip())
+        return True
+
+    GLib.io_add_watch(sys.stdin.fileno(), GLib.IO_IN | GLib.IO_HUP, read)
+    loop.run()
+
+
+if __name__ == "__main__":
+    main()

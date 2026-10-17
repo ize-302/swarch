@@ -1,0 +1,10 @@
+#!/bin/bash
+# ~/.local/bin/btop-toggle
+# Waybar cpu/memory click: open btop on its own workspace (sway moves app_id
+# "btop" there), jump to it if it is already open, or close it and go back if
+# it is the focused window.
+if swaymsg -q '[app_id="btop" con_id=__focused__] kill'; then
+	swaymsg -q workspace back_and_forth
+elif ! swaymsg -q '[app_id="btop"] focus'; then
+	exec alacritty --class btop -e btop
+fi
