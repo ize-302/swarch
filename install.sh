@@ -50,6 +50,10 @@ repo_packages=(
   quickshell qt6-5compat waybar swayidle swaylock swaybg
   # Screenshots, recording and the clipboard
   grim slurp flameshot wf-recorder wl-clipboard cliphist
+  # The desktop portal: flameshot takes its screenshots through it, and apps
+  # share the screen and open file pickers through it. swayfx's own
+  # sway-portals.conf has wlr do screenshots and screen sharing, gtk the rest
+  xdg-desktop-portal xdg-desktop-portal-wlr xdg-desktop-portal-gtk
   # Sound, media keys and brightness
   # (pactl and paplay come from libpulse)
   pipewire pipewire-pulse wireplumber libpulse playerctl brightnessctl

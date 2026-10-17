@@ -20,7 +20,8 @@ Two [GNU Stow](https://www.gnu.org/software/stow/) packages and the system
 files:
 
 - `config/`: what lands in `~/.config` (sway, waybar, quickshell, gtk-3.0,
-  gtk-4.0, fontconfig, sddm, flameshot, alacritty, tmux)
+  gtk-4.0, fontconfig, sddm, flameshot, alacritty, tmux,
+  xdg-desktop-portal-wlr)
 - `home/`: what lands in `$HOME` (the `~/.local/bin` scripts the bar, menus
   and key bindings call)
 - `etc/`: files `install.sh` copies into `/etc` for SDDM
@@ -38,7 +39,7 @@ grouped by what uses each package, is at the top of `install.sh`. It covers:
 - the shell, bar, lock and background: quickshell, waybar, swayidle,
   swaylock, swaybg;
 - screenshots, recording and the clipboard: grim, slurp, flameshot,
-  wf-recorder, cliphist;
+  wf-recorder, cliphist, and the desktop portal flameshot needs;
 - sound, media keys and brightness: pipewire, playerctl, brightnessctl;
 - network and Bluetooth: NetworkManager, blueman;
 - a password prompt (polkit) for apps that need one;
