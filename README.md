@@ -20,7 +20,7 @@ Two [GNU Stow](https://www.gnu.org/software/stow/) packages and the system
 files:
 
 - `config/`: what lands in `~/.config` (sway, waybar, quickshell, gtk-3.0,
-  gtk-4.0, fontconfig, sddm, flameshot, alacritty)
+  gtk-4.0, fontconfig, sddm, flameshot, alacritty, tmux)
 - `home/`: what lands in `$HOME` (the `~/.local/bin` scripts the bar, menus
   and key bindings call)
 - `etc/`: files `install.sh` copies into `/etc` for SDDM
@@ -42,7 +42,7 @@ grouped by what uses each package, is at the top of `install.sh`. It covers:
 - sound, media keys and brightness: pipewire, playerctl, brightnessctl;
 - network and Bluetooth: NetworkManager, blueman;
 - a password prompt (polkit) for apps that need one;
-- alacritty (opening in tmux) and btop;
+- alacritty (opening in tmux, with its plugins) and btop;
 - the GTK theme, icons, cursor and fonts;
 - SDDM.
 

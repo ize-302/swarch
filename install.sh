@@ -64,6 +64,8 @@ repo_packages=(
   polkit-gnome
   # Apps the bar and keys open; alacritty opens in tmux
   alacritty tmux btop
+  # Downloads tmux's plugins
+  git
   # Look: GTK theme, icons, cursor, fonts, gsettings
   adw-gtk-theme papirus-icon-theme adwaita-cursors adwaita-fonts
   ttf-jetbrains-mono-nerd noto-fonts-emoji glib2 gsettings-desktop-schemas
@@ -198,6 +200,23 @@ if [ -n "$dry" ]; then
 else
   stow --no-folding --ignore="$stow_ignore" -t "$HOME/.config" config
   stow --no-folding --ignore="$stow_ignore" -t "$HOME" home
+fi
+
+# --- tmux plugins -------------------------------------------------------------
+
+# tpm, which config/tmux/tmux.conf loads, and the plugins it lists. Done with
+# a tmux server of its own, so one that's already running isn't touched
+tpm="$HOME/.config/tmux/plugins/tpm"
+if [ ! -d "$tpm" ]; then
+  say "Downloading tmux's plugins"
+  run git clone -q --depth 1 https://github.com/tmux-plugins/tpm "$tpm"
+  if [ -z "$dry" ]; then
+    sock=$(mktemp -d)
+    env -u TMUX TMUX_TMPDIR="$sock" "$tpm/bin/install_plugins" >/dev/null
+    rm -rf "$sock"
+  else
+    echo "    would run: $tpm/bin/install_plugins"
+  fi
 fi
 
 # --- Login screen -------------------------------------------------------------
