@@ -45,12 +45,14 @@ run() {
 
 # From the repos, each for what uses it
 repo_packages=(
-  # The shell (config/quickshell), the bar and the lock
-  quickshell qt6-5compat waybar swayidle swaylock
+  # The shell (config/quickshell), the bar, the lock and the desktop
+  # background (sway's `output * bg` runs swaybg)
+  quickshell qt6-5compat waybar swayidle swaylock swaybg
   # Screenshots, recording and the clipboard
   grim slurp flameshot wf-recorder wl-clipboard cliphist
   # Sound, media keys and brightness
-  pipewire pipewire-pulse wireplumber playerctl brightnessctl
+  # (pactl and paplay come from libpulse)
+  pipewire pipewire-pulse wireplumber libpulse playerctl brightnessctl
   sound-theme-freedesktop
   # Notifications (notify-send)
   libnotify

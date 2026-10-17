@@ -35,7 +35,8 @@ up paru first (the prebuilt `paru-bin`, with `base-devel` and `git`).
 Everything else `install.sh` installs itself from the Arch repos. The list,
 grouped by what uses each package, is at the top of `install.sh`. It covers:
 
-- the shell, bar and lock: quickshell, waybar, swayidle, swaylock;
+- the shell, bar, lock and background: quickshell, waybar, swayidle,
+  swaylock, swaybg;
 - screenshots, recording and the clipboard: grim, slurp, flameshot,
   wf-recorder, cliphist;
 - sound, media keys and brightness: pipewire, playerctl, brightnessctl;
