@@ -21,7 +21,8 @@ files:
 
 - `config/`: what lands in `~/.config` (sway, waybar, quickshell, gtk-3.0,
   gtk-4.0, fontconfig, sddm, swappy, alacritty, tmux,
-  xdg-desktop-portal-wlr)
+  xdg-desktop-portal-wlr). tmux's is a starting point: if `~/.config/tmux`
+  is already yours, `install.sh` leaves it and doesn't link swarch's
 - `home/`: what lands in `$HOME` (the `~/.local/bin` scripts the bar, menus
   and key bindings call)
 - `etc/`: files `install.sh` copies into `/etc` for SDDM

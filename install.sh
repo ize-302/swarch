@@ -138,6 +138,18 @@ command -v stow >/dev/null || { note "stow isn't installed (run without --no-pac
 # .qmlls.ini (an editor's settings) where it runs, so that isn't linked.
 stow_ignore='\.qmlls\.ini'
 
+# config/tmux is a starting point. If ~/.config/tmux is already something
+# else's (your own dotfiles), that one stays and swarch's isn't linked; its
+# plugins are still downloaded, if that config loads tpm
+keep_tmux=
+config_ignore=()
+tmux_conf="$HOME/.config/tmux/tmux.conf"
+if [ -e "$tmux_conf" ] && [ "$(readlink -f "$tmux_conf")" != "$(readlink -f config/tmux/tmux.conf)" ]; then
+  keep_tmux=1
+  config_ignore=(--ignore=tmux)
+  say "Keeping your own ~/.config/tmux, swarch's tmux.conf isn't linked"
+fi
+
 # Files already where one of swarch's goes, that aren't swarch's own links. A
 # folder on the way that's a link itself (~/.config/sway pointing into some
 # other dotfiles repo) counts as the thing in the way, so --backup moves the
@@ -154,6 +166,7 @@ for pkg in config home; do
   while IFS= read -r -d '' src; do
     rel=${src#"$pkg"/}
     case "$rel" in */.qmlls.ini) continue ;; esac
+    case "$pkg/$rel" in config/tmux/*) [ -n "$keep_tmux" ] && continue ;; esac
     dir=$target
     linked=
     IFS=/ read -ra parts <<<"$(dirname "$rel")"
@@ -198,11 +211,11 @@ if [ -n "$dry" ]; then
   # Stow's own dry run, which also catches anything the check above missed;
   # not while files that --backup would have moved are still in the way
   if [ ${#conflicts[@]} -eq 0 ] && command -v stow >/dev/null; then
-    stow -n --no-folding --ignore="$stow_ignore" -t "$HOME/.config" config
+    stow -n --no-folding --ignore="$stow_ignore" "${config_ignore[@]}" -t "$HOME/.config" config
     stow -n --no-folding --ignore="$stow_ignore" -t "$HOME" home
   fi
 else
-  stow --no-folding --ignore="$stow_ignore" -t "$HOME/.config" config
+  stow --no-folding --ignore="$stow_ignore" "${config_ignore[@]}" -t "$HOME/.config" config
   stow --no-folding --ignore="$stow_ignore" -t "$HOME" home
 fi
 
@@ -211,7 +224,7 @@ fi
 # tpm, which config/tmux/tmux.conf loads, and the plugins it lists. Done with
 # a tmux server of its own, so one that's already running isn't touched
 tpm="$HOME/.config/tmux/plugins/tpm"
-if [ ! -d "$tpm" ]; then
+if [ ! -d "$tpm" ] && { [ -z "$keep_tmux" ] || grep -q 'plugins/tpm/tpm' "$tmux_conf"; }; then
   say "Downloading tmux's plugins"
   run git clone -q --depth 1 https://github.com/tmux-plugins/tpm "$tpm"
   if [ -z "$dry" ]; then
