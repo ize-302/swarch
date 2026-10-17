@@ -93,8 +93,7 @@ exec /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
 # ~/.local/bin/scratchpad-menu, ~/.local/bin/keybind-menu,
 # ~/.local/bin/control-panel, ~/.local/bin/notification-center and
 # ~/.local/bin/date-panel. It also shows the volume popup, the bluetooth pairing prompts
-# and the notifications (in place of dunst; flameshot only notifies if
-# something already shows notifications, and this is started first).
+# and the notifications (in place of dunst).
 exec qs -c launcher -d
 
 # Outputs (where each display goes, its scale) are your own settings: they go
@@ -162,8 +161,11 @@ bindsym $mod+Shift+w exec ~/.local/bin/wallpaper-rotate --next
 # Open a terminal
 bindsym $mod+Return exec $term
 
-# Screenshot
-bindsym $mod+s exec sh -c 'pkill -x flameshot || flameshot gui'
+# Screenshot of an area, opened in swappy to mark up, save (to ~/Pictures) or
+# copy. grim takes each display at its own scale, so a 1x screen beside a
+# scaled one isn't stretched (flameshot's capture, through the portal, was).
+# Pressing it again while picking the area cancels
+bindsym $mod+s exec sh -c 'pkill -x slurp || { g=$(slurp) && grim -g "$g" - | swappy -f -; }'
 
 # Start or stop screen recording
 bindsym $mod+Shift+s exec ~/.local/bin/record-toggle
