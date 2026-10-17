@@ -32,6 +32,10 @@ SDDM login theme.
 
 ![The power menu (Super+Esc): Lock, Log Out, Sleep, Restart and Shut Down](docs/screenshots/power-menu.webp)
 
+![The lock screen: date and clock over the blurred wallpaper, with the avatar and password field](docs/screenshots/lock-screen.webp)
+
+![The SDDM login screen, in the same style as the lock screen](docs/screenshots/login-screen.webp)
+
 Arch only: SwayFX comes from the AUR.
 
 ## Layout
