@@ -1,0 +1,4 @@
+# Sharing the screen: pick the output to share by clicking it, with slurp
+[screencast]
+chooser_type=simple
+chooser_cmd=slurp -f %o -or
