@@ -60,8 +60,8 @@ repo_packages=(
   python python-dbus python-gobject
   # Asks for passwords for apps that need them (started in config/sway/config)
   polkit-gnome
-  # Apps the bar and keys open
-  alacritty btop
+  # Apps the bar and keys open; alacritty opens in tmux
+  alacritty tmux btop
   # Look: GTK theme, icons, cursor, fonts, gsettings
   adw-gtk-theme papirus-icon-theme adwaita-cursors adwaita-fonts
   ttf-jetbrains-mono-nerd noto-fonts-emoji glib2 gsettings-desktop-schemas

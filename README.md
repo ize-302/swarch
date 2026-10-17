@@ -41,7 +41,7 @@ grouped by what uses each package, is at the top of `install.sh`. It covers:
 - sound, media keys and brightness: pipewire, playerctl, brightnessctl;
 - network and Bluetooth: NetworkManager, blueman;
 - a password prompt (polkit) for apps that need one;
-- alacritty and btop;
+- alacritty (opening in tmux) and btop;
 - the GTK theme, icons, cursor and fonts;
 - SDDM.
 
