@@ -1,3 +1,9 @@
+# Your own settings go in ~/.config/alacritty/local.toml (skipped when it
+# isn't there). This file is read after it, so it adds to what's here
+# (a shell, key bindings) rather than overriding it
+[general]
+import = ["~/.config/alacritty/local.toml"]
+
 [window]
 opacity = 1.0
 padding.x = 4
@@ -50,8 +56,4 @@ white   = "#a9b1d6"
 [colors.primary]
 background = "#1a1b26"
 foreground = "#c0caf5"
-
-[terminal]
-shell.program = "tmux"
-shell.args = ["new-session", "-A", "-s", "home"]
 
