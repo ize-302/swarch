@@ -1,5 +1,14 @@
 #!/bin/bash
 # ~/.local/bin/record-toggle
+# ~/.local/bin/record-toggle --sound|--desktop
+# Records an area or a screen picked with slurp to ~/Videos, or stops the recording
+# that's going. --sound records the microphone too, --desktop what's
+# playing. The bar's red dot (custom/recording in config/waybar) shows while
+# it records: waybar is signalled (SIGRTMIN+12) when it starts and stops.
+bar() {
+	pkill -RTMIN+12 -x waybar
+}
+
 if pgrep -x wf-recorder >/dev/null; then
 	pkill -INT wf-recorder
 	notify-send "Recording saved"
@@ -16,5 +25,14 @@ else
 	esac
 
 	notify-send "Select area to record"
-	wf-recorder -g "$(slurp)" -c libx264rgb "${audio_args[@]}" -f ~/Videos/rec-$(date +%Y%m%d-%H%M%S).mp4
+	# Drag for an area, click for the whole screen under the mouse (-o);
+	# Escape: nothing to record
+	area=$(slurp -o) || exit 0
+	wf-recorder -g "$area" -c libx264rgb "${audio_args[@]}" -f ~/Videos/rec-$(date +%Y%m%d-%H%M%S).mp4 &
+	# Once wf-recorder is running, so the bar finds it
+	sleep 0.3
+	bar
+	# Stopped (by running this again) or failed: the dot goes
+	wait
+	bar
 fi

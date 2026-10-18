@@ -171,7 +171,7 @@ bindsym $mod+e exec thunar
 bindsym $mod+s exec sh -c 'pkill -x slurp || { g=$(slurp) && grim -g "$g" - | swappy -f -; }'
 
 # Start or stop screen recording
-bindsym $mod+Shift+s exec ~/.local/bin/record-toggle
+bindsym $mod+Shift+s exec ~/.local/bin/record-toggle --desktop
 
 # Move the focused window to the scratchpad
 bindsym $mod+BackSpace move scratchpad

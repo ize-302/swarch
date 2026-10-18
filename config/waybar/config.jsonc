@@ -6,6 +6,7 @@
 	"spacing": 0,
 	"modules-left": ["sway/workspaces", "sway/scratchpad", "sway/mode"],
 	"modules-right": [
+		"custom/recording",
 		"tray",
 		"temperature",
 		"disk",
@@ -158,6 +159,17 @@
 		"on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
 		"on-scroll-up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+",
 		"on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+	},
+
+	// A red record dot while the screen is being recorded (Super+Shift+S),
+	// hidden otherwise. ~/.local/bin/record-toggle signals SIGRTMIN+12 when
+	// it starts and stops. Click stops the recording.
+	"custom/recording": {
+		"exec": "pgrep -x wf-recorder >/dev/null && echo '{\"text\": \"\\udb81\\udc4a\", \"tooltip\": \"Recording the screen. Click to stop\"}' || echo '{\"text\": \"\"}'",
+		"return-type": "json",
+		"interval": "once",
+		"signal": 12,
+		"on-click": "~/.local/bin/record-toggle"
 	},
 
 	// The penguin; hover shows the kernel version. The script has to send
