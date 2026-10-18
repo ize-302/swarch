@@ -68,6 +68,11 @@ repo_packages=(
   polkit-gnome
   # Apps the bar and keys open; alacritty opens in tmux
   alacritty tmux btop
+  # The file manager: trash and network places (gvfs), thumbnails (tumbler,
+  # and for videos, PDFs, WebP and office files), extract and compress in the
+  # right-click menu, audio tags
+  thunar gvfs tumbler ffmpegthumbnailer poppler-glib webp-pixbuf-loader libgsf
+  thunar-archive-plugin xarchiver thunar-media-tags-plugin
   # Downloads tmux's plugins
   git
   # Look: GTK theme, icons, cursor, fonts, gsettings
@@ -277,6 +282,12 @@ fi
 if [ "$(systemctl is-enabled bluetooth 2>/dev/null)" != enabled ]; then
   say "Enabling Bluetooth"
   run sudo systemctl enable --now bluetooth
+fi
+
+# Folders open in Thunar: browsers' "Show in folder", and xdg-open on a folder
+if [ "$(xdg-mime query default inode/directory 2>/dev/null)" != thunar.desktop ]; then
+  say "Making Thunar the file manager"
+  run xdg-mime default thunar.desktop inode/directory
 fi
 
 # Not switched on here: another network service (iwd, systemd-networkd) may be

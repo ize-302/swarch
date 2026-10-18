@@ -161,6 +161,9 @@ bindsym $mod+Shift+w exec ~/.local/bin/wallpaper-rotate --next
 # Open a terminal
 bindsym $mod+Return exec $term
 
+# Open the file manager
+bindsym $mod+e exec thunar
+
 # Screenshot of an area, opened in swappy to mark up, save (to ~/Pictures) or
 # copy. grim takes each display at its own scale, so a 1x screen beside a
 # scaled one isn't stretched (flameshot's capture, through the portal, was).
