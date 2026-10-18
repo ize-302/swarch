@@ -22,7 +22,8 @@ Item {
     property int inset: Theme.rowPadding
     // Size of a page's title
     property int titleSize: Theme.searchFontSize
-    // Key cap at the end of a page's title, lit while it's running
+    // Key cap at the end of a page's title, lit and spinning while it's
+    // running
     property string action: ""
     property bool actionActive: false
 
@@ -120,6 +121,7 @@ Item {
         text: header.action
         fontSize: Math.min(Theme.keyFontSize, header.titleSize - 2)
         lit: header.actionActive || actionMouse.containsMouse
+        busy: header.actionActive
 
         MouseArea {
             id: actionMouse

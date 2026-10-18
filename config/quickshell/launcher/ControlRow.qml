@@ -33,6 +33,20 @@ Column {
     readonly property bool input: kind === "joinName" || kind === "joinPassword"
     // Only shows something: a network's details, how joining went
     readonly property bool passive: kind === "info" || kind === "joinStatus"
+    // Under way, shown by a spinner: a network or bluetooth device
+    // connecting, disconnecting or pairing, bluetooth turning on or off,
+    // a hidden network being joined
+    readonly property bool busy: {
+        if (kind === "network")
+            return network.state === ConnectionState.Connecting || network.state === ConnectionState.Disconnecting;
+        if (kind === "bluetoothDevice")
+            return device.pairing || device.state === BluetoothDeviceState.Connecting || device.state === BluetoothDeviceState.Disconnecting;
+        if (kind === "bluetooth")
+            return panel.adapter.state === BluetoothAdapterState.Enabling || panel.adapter.state === BluetoothAdapterState.Disabling;
+        if (kind === "joinStatus")
+            return panel.joinBusy;
+        return false;
+    }
     // Sliders and switches are full size; lists are a little smaller
     readonly property bool main: !modelData.list
     readonly property bool muted: node?.audio?.muted ?? false
@@ -78,10 +92,9 @@ Column {
             return panel.deviceName(node);
         if (kind === "bluetooth") {
             const state = panel.adapter.state;
-            if (state === BluetoothAdapterState.Enabling)
-                return "Turning on…";
-            if (state === BluetoothAdapterState.Disabling)
-                return "Turning off…";
+            // Turning on or off: just the name, by the spinner
+            if (state === BluetoothAdapterState.Enabling || state === BluetoothAdapterState.Disabling)
+                return "Bluetooth";
             if (state === BluetoothAdapterState.Blocked)
                 return "Off (blocked)";
             // On its page, the switch just says what it is
@@ -122,16 +135,14 @@ Column {
         if (kind === "join")
             return "Join other network…";
         if (kind === "joinStatus")
-            return panel.joinBusy ? "Joining " + panel.joinName + "…" : panel.joinError;
+            return panel.joinBusy ? panel.joinName : panel.joinError;
         return "";
     }
     // Dimmed text after the label
     readonly property string detail: {
         if (kind === "network") {
-            if (network.state === ConnectionState.Connecting)
-                return "connecting…";
-            if (network.state === ConnectionState.Disconnecting)
-                return "disconnecting…";
+            if (entry.busy)
+                return "";
             const failure = panel.failures[network.name];
             // No secrets: nothing to try (no password saved, or none that
             // iwd knows), not a wrong one
@@ -149,12 +160,8 @@ Column {
             return modelData.codec;
         if (kind !== "bluetoothDevice")
             return "";
-        if (device.pairing)
-            return "pairing…";
-        if (device.state === BluetoothDeviceState.Connecting)
-            return "connecting…";
-        if (device.state === BluetoothDeviceState.Disconnecting)
-            return "disconnecting…";
+        if (entry.busy)
+            return "";
         if (!device.paired)
             return "new";
         return device.connected && device.batteryAvailable ? Math.round(device.battery * 100) + "%" : "";
@@ -222,7 +229,7 @@ Column {
         // The bluetooth page searches from its title
         action: {
             if (back && entry.modelData.section === "Bluetooth" && panel.bluetoothOn)
-                return panel.adapter.discovering ? "Searching…" : "Search";
+                return "Search";
             return "";
         }
         actionActive: entry.modelData.section === "Bluetooth" && (panel.adapter?.discovering ?? false)
@@ -320,7 +327,7 @@ Column {
 
                 anchors.verticalCenter: parent.verticalCenter
                 visible: !entry.slider && !entry.input
-                width: parent.width - (end.visible ? end.width + parent.spacing : 0) - (icon.visible ? icon.width + parent.spacing : 0) - (detail.visible ? detail.width + parent.spacing : 0) - (signal.visible ? signal.width + parent.spacing : 0) - (more.visible ? more.width + parent.spacing : 0)
+                width: parent.width - (end.visible ? end.width + parent.spacing : 0) - (icon.visible ? icon.width + parent.spacing : 0) - (detail.visible ? detail.width + parent.spacing : 0) - (busySpinner.visible ? busySpinner.width + parent.spacing : 0) - (signal.visible ? signal.width + parent.spacing : 0) - (more.visible ? more.width + parent.spacing : 0)
                 text: entry.label
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
@@ -443,6 +450,17 @@ Column {
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.controlSmallFontSize
                 font.weight: Theme.fontWeight
+            }
+
+            // In place of a detail like "connecting…"
+            Spinner {
+                id: busySpinner
+
+                anchors.verticalCenter: parent.verticalCenter
+                visible: entry.busy
+                width: Theme.controlSmallFontSize
+                height: Theme.controlSmallFontSize
+                color: Theme.dimColor
             }
 
             // A network's signal bars, dimmed, with a small lock

@@ -20,6 +20,8 @@ Rectangle {
     // Selected: bold, like the menus' selected rows; `weight` otherwise
     property bool bold: false
     property int weight: Theme.fontWeight
+    // Under way: a spinner in place of the text, the cap keeping its width
+    property bool busy: false
 
     width: Math.max(minWidth, label.implicitWidth + Theme.keyPadding * 2)
     height: Theme.keyHeight
@@ -37,5 +39,14 @@ Rectangle {
         font.family: Theme.fontFamily
         font.pixelSize: cap.fontSize
         font.weight: cap.bold ? Theme.selectedWeight : cap.weight
+        opacity: cap.busy ? 0 : 1
+    }
+
+    Spinner {
+        anchors.centerIn: parent
+        visible: cap.busy
+        width: cap.fontSize
+        height: cap.fontSize
+        color: label.color
     }
 }

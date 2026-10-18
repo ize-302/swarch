@@ -10,8 +10,8 @@ import qs
 // screen like the bluetooth pairing prompts (BluetoothAgent.qml): a new
 // secured network picked on the control panel's Network page, or one whose
 // password was wrong or has changed. Enter (or Join) connects, Escape (or
-// Cancel) gives up. It stays up while connecting, and says why if that
-// didn't work. The control panel (ControlPanel.qml) says which network it's
+// Cancel) gives up. It stays up while connecting, Join spinning, and says
+// why if that didn't work. The control panel (ControlPanel.qml) says which network it's
 // for (`passwordFor`) and does the joining.
 Scope {
     id: root
@@ -99,10 +99,10 @@ Scope {
 
                 Text {
                     width: parent.width
-                    text: root.busy ? "Connecting…" : root.error || "This network needs a password."
+                    text: root.error || "This network needs a password."
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
-                    color: !root.busy && root.error ? Theme.closeColor : Theme.keyTextColor
+                    color: root.error ? Theme.closeColor : Theme.keyTextColor
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.controlFontSize
                     font.weight: Theme.fontWeight
@@ -182,11 +182,21 @@ Scope {
                         Text {
                             id: join
                             anchors.centerIn: parent
-                            text: root.busy ? "Joining…" : "Join"
+                            text: "Join"
+                            opacity: root.busy ? 0 : 1
                             color: "white"
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.controlFontSize
                             font.weight: Font.DemiBold
+                        }
+
+                        // Connecting
+                        Spinner {
+                            anchors.centerIn: parent
+                            visible: root.busy
+                            width: Theme.controlFontSize
+                            height: Theme.controlFontSize
+                            color: "white"
                         }
 
                         MouseArea {
