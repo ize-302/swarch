@@ -24,7 +24,7 @@ window#waybar {
   margin: 0;
   /* Tint, not a solid, so the bar's glass shows through */
   background-color: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.6);
+  color: #ffffff;
 }
 
 /* No icons to make room for, so keep the number centred */
@@ -35,7 +35,7 @@ window#waybar {
 /* Shown on another output */
 #workspaces button.visible {
   background-color: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.85);
+  color: #ffffff;
 }
 
 #workspaces button.focused {
@@ -58,9 +58,6 @@ window#waybar {
 #scratchpad {
   padding: 0 8px;
   background-color: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.6);
-}
-#scratchpad:hover {
   color: #ffffff;
 }
 
