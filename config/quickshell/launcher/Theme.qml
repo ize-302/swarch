@@ -196,7 +196,8 @@ Singleton {
     readonly property color accentColor: "#ff7518"
 
     // Bluetooth pairing prompt (BluetoothAgent.qml): the code's digits as
-    // key caps, and the buttons
+    // key caps, and the buttons. The Wi-Fi password prompt
+    // (WifiPassword.qml) is the same size.
     readonly property int pairingWidth: 400
     readonly property int pairingCodeSize: 20
     readonly property int pairingButtonWidth: 80

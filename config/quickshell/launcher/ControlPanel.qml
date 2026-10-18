@@ -29,7 +29,8 @@ import qs
 // selected slider or skip back and forward on what's playing, m mutes a
 // volume, Enter plays or pauses, mutes a volume, makes a device
 // the default, turns Wi-Fi or bluetooth on or off, or connects to a network
-// or device (asking for a new network's password), Delete forgets a network
+// or device (asking for a new network's password in the middle of the
+// screen, WifiPassword.qml), Delete forgets a network
 // or bluetooth device, and s searches for bluetooth devices.
 //
 // On the Network page, Right (or l, or the › on a row) opens a network's
@@ -88,12 +89,15 @@ Scope {
         const networks = wifiDevice.networks.values.filter(network => network.name);
         return networks.sort((a, b) => rank(a) - rank(b) || b.signalStrength - a.signalStrength).slice(0, Theme.maxNetworks);
     }
-    // The network a password is being typed for, and why recent attempts
-    // failed (name -> ConnectionFailReason)
+    // The network the password prompt (WifiPassword.qml) is asking for, and
+    // why recent attempts failed (name -> ConnectionFailReason)
     property WifiNetwork passwordFor: null
     property var failures: ({})
-    // A saved network's new password, for network-info's stdin
+    // The password typed, for network-info's stdin; connecting with it, and
+    // why that didn't work
     property string newPassword: ""
+    property bool passwordBusy: false
+    property string passwordError: ""
 
     // The section whose page is open, or "" for the main view; the main view
     // each time the panel opens. Also "Details" (a network's) and "Join" (a
@@ -130,8 +134,7 @@ Scope {
     // One per row, with the section it's in: a volume
     // ({ kind: "volume", node }), an audio device to make the default ({ kind: "device", node }), a cable
     // ({ kind: "wired", device }), the Wi-Fi switch ({ kind: "wifi" }), a
-    // network ({ kind: "network", network }) and the password for it
-    // ({ kind: "password", network }), the bluetooth switch
+    // network ({ kind: "network", network }), the bluetooth switch
     // ({ kind: "bluetooth" }) or a bluetooth device
     // ({ kind: "bluetoothDevice", device }). List rows (`list`) are on the
     // section's page; the rest are on the main view.
@@ -177,21 +180,13 @@ Scope {
                 device: device
             });
         if (wifiDevice) {
-            for (const network of networks) {
+            for (const network of networks)
                 rows.push({
                     section: "Network",
                     kind: "network",
                     list: true,
                     network: network
                 });
-                if (network === passwordFor)
-                    rows.push({
-                        section: "Network",
-                        kind: "password",
-                        list: true,
-                        network: network
-                    });
-            }
             if (Networking.wifiEnabled)
                 rows.push({
                     section: "Network",
@@ -560,46 +555,43 @@ Scope {
         }
     }
 
-    // Opens the password row under the network and moves to it
+    // Opens the password prompt for it
     function askPassword(network) {
+        if (passwordFor !== network)
+            passwordError = "";
         passwordFor = network;
-        Qt.callLater(() => root.current = root.rows.findIndex(row => row.kind === "password"));
     }
 
-    // A new network connects with it; a saved one (its password was wrong,
-    // or has changed) gets it saved by network-info, then connects
+    // Connects with it through network-info, which gives it to iwd when
+    // that's what connects (NetworkManager alone can't pass it on without
+    // a secret agent). The prompt stays up, busy, until it's done.
     function submitPassword(password) {
         const network = passwordFor;
-        passwordFor = null;
-        list.forceActiveFocus();
-        if (!network || !password)
+        if (!network || !password || passwordBusy)
             return;
         root.setFailure(network);
-        if (network.known) {
-            newPassword = password;
-            passwordProcess.command = [Theme.networkInfo, "password", network.name];
-            passwordProcess.running = true;
-        } else {
-            network.connectWithPsk(password);
-        }
+        passwordError = "";
+        passwordBusy = true;
+        newPassword = password;
+        passwordProcess.command = [Theme.networkInfo, "connect", network.name];
+        passwordProcess.running = true;
     }
 
     // A connection failed: shown on its row. One that wants a password
-    // (none saved, or the saved one is wrong) asks for it on the Network
-    // page, opening the panel if it's closed, as nm-applet's dialog did.
+    // (none saved, or the saved one is wrong) asks for it, panel open or
+    // not, as nm-applet's dialog did.
     function connectionFailed(network, reason) {
         root.setFailure(network, reason);
         if (reason !== ConnectionFailReason.NoSecrets && reason !== ConnectionFailReason.WifiAuthTimeout)
             return;
-        if (!open)
-            open = true;
-        if (page !== "Network")
-            root.openPage("Network");
         root.askPassword(network);
     }
 
     function cancelPassword() {
+        if (passwordBusy)
+            return;
         passwordFor = null;
+        passwordError = "";
         list.forceActiveFocus();
     }
 
@@ -738,7 +730,6 @@ Scope {
             entryPage = "";
             atPointer = false;
             placeWaited = false;
-            passwordFor = null;
             detailsFor = null;
             deviceFor = null;
             if (adapter?.discovering)
@@ -862,7 +853,9 @@ Scope {
     }
 
     // Every network nearby, not just the ones listed, so a saved network
-    // failing on its own (its password changed) asks too
+    // failing on its own (its password changed) asks too. A failure goes
+    // once the network connects, as when NetworkManager's own retry gets
+    // it back after a dropout
     Instantiator {
         model: root.wifiDevice ? root.wifiDevice.networks.values : []
 
@@ -873,6 +866,11 @@ Scope {
 
             function onConnectionFailed(reason) {
                 root.connectionFailed(modelData, reason);
+            }
+
+            function onConnectedChanged() {
+                if (modelData.connected && root.failures[modelData.name] !== undefined)
+                    root.setFailure(modelData);
             }
         }
     }
@@ -885,6 +883,24 @@ Scope {
         onStarted: {
             write(root.newPassword + "\n");
             root.newPassword = "";
+        }
+
+        // Connected: the prompt goes. Not: it stays, saying why.
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.passwordBusy = false;
+                let result = {};
+                try {
+                    result = JSON.parse(text);
+                } catch (error) {}
+                if (result.ok) {
+                    root.passwordFor = null;
+                    root.passwordError = "";
+                    list.forceActiveFocus();
+                } else {
+                    root.passwordError = result.error || "Couldn't connect";
+                }
+            }
         }
     }
 
@@ -936,7 +952,8 @@ Scope {
 
         WlrLayershell.namespace: "launcher-shadow"
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+        // Keys go to the password prompt while it's up, then come back
+        WlrLayershell.keyboardFocus: root.passwordFor ? WlrKeyboardFocus.None : WlrKeyboardFocus.Exclusive
 
         anchors {
             bottom: true
@@ -1077,5 +1094,9 @@ Scope {
                 }
             }
         }
+    }
+
+    WifiPassword {
+        panel: root
     }
 }

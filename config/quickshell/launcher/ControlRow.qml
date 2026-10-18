@@ -10,8 +10,7 @@ import qs
 // One row of the control panel (ControlPanel.qml), its section's header over
 // the first: what's playing, a slider (a volume), a switch (Wi-Fi,
 // bluetooth), a device or
-// network on a page, a password being typed, or a network's details and the
-// hidden network form. What kind it is, and what it shows, comes from the
+// network on a page, or a network's details and the hidden network form. What kind it is, and what it shows, comes from the
 // row (`modelData`, one of the panel's `rows`); clicks and keys go to the
 // panel.
 Column {
@@ -30,13 +29,12 @@ Column {
     readonly property bool slider: panel.isSlider(modelData)
     // Wi-Fi and bluetooth on or off, and a network joining by itself
     readonly property bool toggle: kind === "bluetooth" || kind === "wifi" || kind === "autoconnect" || kind === "btTrust"
-    // Typed into: a new network's password, the hidden network form
-    readonly property bool input: kind === "password" || kind === "joinName" || kind === "joinPassword"
+    // Typed into: the hidden network form
+    readonly property bool input: kind === "joinName" || kind === "joinPassword"
     // Only shows something: a network's details, how joining went
     readonly property bool passive: kind === "info" || kind === "joinStatus"
-    // Sliders, switches and the password are full size;
-    // lists are a little smaller
-    readonly property bool main: !modelData.list || kind === "password"
+    // Sliders and switches are full size; lists are a little smaller
+    readonly property bool main: !modelData.list
     readonly property bool muted: node?.audio?.muted ?? false
     readonly property real level: node?.audio?.volume ?? 0
     // Under the mouse or picked with the keys: there's
@@ -135,9 +133,13 @@ Column {
             if (network.state === ConnectionState.Disconnecting)
                 return "disconnecting…";
             const failure = panel.failures[network.name];
-            if (failure !== undefined)
-                return failure === ConnectionFailReason.NoSecrets || failure === ConnectionFailReason.WifiAuthTimeout ? "wrong password" : "failed";
-            return network.known && !network.connected ? "saved" : "";
+            // No secrets: nothing to try (no password saved, or none that
+            // iwd knows), not a wrong one
+            if (failure !== undefined && !network.connected)
+                return failure === ConnectionFailReason.NoSecrets ? "needs password" : failure === ConnectionFailReason.WifiAuthTimeout ? "wrong password" : "failed";
+            if (network.connected)
+                return "connected";
+            return network.known ? "saved" : "";
         }
         if (kind === "wired")
             return device.linkSpeed ? device.linkSpeed + " Mb/s" : "";
@@ -343,11 +345,10 @@ Column {
                 }
             }
 
-            // A new network's password, or the hidden network's name or
-            // password, underlined like a field. A password: Enter
-            // connects, Escape gives up. The form: Enter (or Tab, or Down)
-            // on the name goes to the password, Up back; Enter on the
-            // password joins, Escape goes back.
+            // The hidden network's name or password, underlined like a
+            // field. Enter (or Tab, or Down) on the name goes to the
+            // password, Up back; Enter on the password joins, Escape goes
+            // back.
             TextInput {
                 id: password
 
@@ -363,7 +364,7 @@ Column {
                 font.weight: Theme.fontWeight
                 clip: true
 
-                Component.onCompleted: if (entry.kind === "password" || entry.kind === "joinName")
+                Component.onCompleted: if (entry.kind === "joinName")
                     forceActiveFocus()
 
                 onTextChanged: {
@@ -375,14 +376,7 @@ Column {
 
                 Keys.onPressed: event => {
                     const enter = event.key === Qt.Key_Return || event.key === Qt.Key_Enter;
-                    if (entry.kind === "password") {
-                        if (enter)
-                            panel.submitPassword(text);
-                        else if (event.key === Qt.Key_Escape)
-                            panel.cancelPassword();
-                        else
-                            return;
-                    } else if (event.key === Qt.Key_Escape) {
+                    if (event.key === Qt.Key_Escape) {
                         panel.closePage();
                     } else if (entry.kind === "joinName" && (enter || event.key === Qt.Key_Tab || event.key === Qt.Key_Down)) {
                         panel.focusRow(entry.index + 1);
@@ -398,7 +392,7 @@ Column {
 
                 Text {
                     visible: password.text.length === 0
-                    text: entry.kind === "joinName" ? "Network name" : entry.kind === "joinPassword" ? "Password (none if it's open)" : Theme.passwordPlaceholder
+                    text: entry.kind === "joinName" ? "Network name" : "Password (none if it's open)"
                     color: Theme.dimColor
                     font: password.font
                 }
