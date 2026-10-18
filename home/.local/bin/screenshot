@@ -1,0 +1,38 @@
+#!/bin/bash
+# ~/.local/bin/screenshot
+# A screenshot of an area (drag) or a whole screen (click), opened in swappy
+# to mark up, save or copy. Running it again while picking cancels. grim
+# takes each display at its own scale, so a 1x screen beside a scaled one
+# isn't stretched (flameshot's capture, through the portal, was).
+#
+# Saved ones go to ~/Pictures/Screenshots (config/swappy) and get a
+# notification with the picture: click it to open the screenshot, or "Show
+# in folder" for Thunar with it selected.
+dir=~/Pictures/Screenshots
+
+pkill -x slurp && exit 0
+area=$(slurp -o) || exit 0
+
+mkdir -p "$dir"
+since=$(mktemp)
+trap 'rm -f "$since"' EXIT
+grim -g "$area" - | swappy -f -
+
+# What swappy saved, if anything (not when only copied)
+saved=$(find "$dir" -maxdepth 1 -type f -newer "$since" -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2-)
+[ -n "$saved" ] || exit 0
+
+# Waits for a click, for at most an hour
+action=$(timeout 1h notify-send -a Screenshot -i "$saved" \
+	--action=default=Open --action=folder="Show in folder" --wait \
+	"Screenshot saved" "${saved##*/}")
+case "$action" in
+default)
+	xdg-open "$saved"
+	;;
+folder)
+	gdbus call --session --dest org.freedesktop.FileManager1 \
+		--object-path /org/freedesktop/FileManager1 \
+		--method org.freedesktop.FileManager1.ShowItems "['file://$saved']" "" >/dev/null
+	;;
+esac

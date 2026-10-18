@@ -164,11 +164,10 @@ bindsym $mod+Return exec $term
 # Open the file manager
 bindsym $mod+e exec thunar
 
-# Screenshot of an area, opened in swappy to mark up, save (to ~/Pictures) or
-# copy. grim takes each display at its own scale, so a 1x screen beside a
-# scaled one isn't stretched (flameshot's capture, through the portal, was).
-# Pressing it again while picking the area cancels
-bindsym $mod+s exec sh -c 'pkill -x slurp || { g=$(slurp) && grim -g "$g" - | swappy -f -; }'
+# Screenshot of an area (drag) or a whole screen (click), opened in swappy to
+# mark up, save (to ~/Pictures/Screenshots) or copy. Pressing it again while
+# picking cancels
+bindsym $mod+s exec ~/.local/bin/screenshot
 
 # Start or stop screen recording
 bindsym $mod+Shift+s exec ~/.local/bin/record-toggle --desktop

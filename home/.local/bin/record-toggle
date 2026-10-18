@@ -1,17 +1,22 @@
 #!/bin/bash
 # ~/.local/bin/record-toggle
 # ~/.local/bin/record-toggle --sound|--desktop
-# Records an area or a screen picked with slurp to ~/Videos, or stops the recording
-# that's going. --sound records the microphone too, --desktop what's
-# playing. The bar's red dot (custom/recording in config/waybar) shows while
-# it records: waybar is signalled (SIGRTMIN+12) when it starts and stops.
+# Records an area or a screen picked with slurp to ~/Videos/Recordings, or
+# stops the recording that's going. --sound records the microphone too,
+# --desktop what's playing. The bar's red dot (custom/recording in
+# config/waybar) shows while it records: waybar is signalled (SIGRTMIN+12)
+# when it starts and stops. Once stopped, a notification with its first
+# frame: click it to play the recording, or "Show in folder" for Thunar
+# with it selected.
+dir=~/Videos/Recordings
+
 bar() {
 	pkill -RTMIN+12 -x waybar
 }
 
 if pgrep -x wf-recorder >/dev/null; then
+	# The run that started it says it's saved
 	pkill -INT wf-recorder
-	notify-send "Recording saved"
 else
 	audio_args=()
 	case "$1" in
@@ -28,11 +33,37 @@ else
 	# Drag for an area, click for the whole screen under the mouse (-o);
 	# Escape: nothing to record
 	area=$(slurp -o) || exit 0
-	wf-recorder -g "$area" -c libx264rgb "${audio_args[@]}" -f ~/Videos/rec-$(date +%Y%m%d-%H%M%S).mp4 &
+	mkdir -p "$dir"
+	file="$dir/rec-$(date +%Y%m%d-%H%M%S).mp4"
+	wf-recorder -g "$area" -c libx264rgb "${audio_args[@]}" -f "$file" &
 	# Once wf-recorder is running, so the bar finds it
 	sleep 0.3
 	bar
 	# Stopped (by running this again) or failed: the dot goes
 	wait
 	bar
+
+	if [ ! -s "$file" ]; then
+		notify-send -u critical "Recording failed" "Nothing was recorded."
+		exit 1
+	fi
+
+	# Its first frame as the notification's picture
+	thumb="${XDG_RUNTIME_DIR:-/tmp}/record-toggle-${file##*/}.png"
+	ffmpegthumbnailer -i "$file" -o "$thumb" -s 256 2>/dev/null || thumb=video-x-generic
+
+	# Waits for a click, for at most an hour
+	action=$(timeout 1h notify-send -a "Screen recording" -i "$thumb" \
+		--action=default=Play --action=folder="Show in folder" --wait \
+		"Recording saved" "${file##*/}")
+	case "$action" in
+	default)
+		xdg-open "$file"
+		;;
+	folder)
+		gdbus call --session --dest org.freedesktop.FileManager1 \
+			--object-path /org/freedesktop/FileManager1 \
+			--method org.freedesktop.FileManager1.ShowItems "['file://$file']" "" >/dev/null
+		;;
+	esac
 fi

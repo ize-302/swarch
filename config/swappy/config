@@ -1,5 +1,6 @@
 [Default]
-# Where flameshot saved them, named like its were (plus seconds)
-save_dir=$HOME/Pictures
+# Named like flameshot's were (plus seconds), in a folder of their own
+# (~/.local/bin/screenshot looks there to say they were saved)
+save_dir=$HOME/Pictures/Screenshots
 save_filename_format=%Y-%m-%d_%H-%M-%S.png
 early_exit=true
