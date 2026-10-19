@@ -108,14 +108,17 @@ Scope {
     }
 
     // A click or Enter: a collapsed stack spreads out, a header collapses
-    // its stack, a card runs its default action
+    // its stack, a card runs its default action and closes the centre for
+    // its app
     function activate(row) {
-        if (row.kind === "header")
+        if (row.kind === "header") {
             root.setExpanded(row.group, false);
-        else if (row.stack > 1)
+        } else if (row.stack > 1) {
             root.setExpanded(row.group, true);
-        else
+        } else {
             server.activate(row.notification);
+            root.open = false;
+        }
     }
 
     // The × or Delete: a stack (collapsed, or its header) goes whole

@@ -16,7 +16,8 @@ import qs
 // Cards stack up from just above the bar, the newest lowest, at most
 // maxPopups at once; they float, clear of the bar and the screen edge. They go after the app's timeout (or notificationTimeout), which
 // pauses under the mouse; critical ones stay and have a red edge. A click
-// runs the notification's default action, a right click or the × dismisses
+// runs the notification's default action and brings up its app (starting it
+// if it isn't running), a right click or the × dismisses
 // it, and its other actions are key caps.
 //
 // The bar's bell (waybar's custom/notifications) has an orange dot while
@@ -139,13 +140,30 @@ Scope {
             notification.expire();
     }
 
-    // Its default action, which also closes it, or just the card
+    // Its default action, which also closes it, or just the card; then its
+    // app, brought up
     function activate(notification) {
+        root.openApp(notification);
         const action = notification.actions.find(action => action.identifier === "default");
         if (action)
             action.invoke();
         else
             root.hide(notification);
+    }
+
+    // Focuses the app's window, as sway won't let an app (XWayland ones,
+    // like Pumble) take the focus itself when its action runs; or starts it
+    // when it has none. Looked for by the names the app might go by: its
+    // desktop entry, the entry's window class, its name.
+    function openApp(notification) {
+        const entry = DesktopEntries.byId(notification.desktopEntry) ?? DesktopEntries.heuristicLookup(notification.appName);
+        const names = [notification.desktopEntry, entry?.id, entry?.startupClass, notification.appName].filter(name => /^[\w.-]+$/.test(name ?? ""));
+        if (names.length === 0)
+            return;
+        const pattern = `(?i)^(${[...new Set(names)].map(name => name.replace(/\./g, "\\.")).join("|")})$`;
+        focusApp.entry = entry;
+        focusApp.command = ["sh", "-c", `swaymsg -q '[app_id="${pattern}"] focus' || swaymsg -q '[class="${pattern}"] focus'`];
+        focusApp.running = true;
     }
 
     // How long a card stays, in ms; 0 for until it's closed. Apps give
@@ -232,6 +250,18 @@ Scope {
         path: Quickshell.env("XDG_RUNTIME_DIR") + "/notifications.json"
         printErrors: false
         onSaved: Quickshell.execDetached(["pkill", "-RTMIN+8", "-x", "waybar"])
+    }
+
+    // No window of the app's to focus: starts it
+    Process {
+        id: focusApp
+
+        property var entry: null
+
+        onExited: code => {
+            if (code !== 0)
+                entry?.execute();
+        }
     }
 
     Timer {
