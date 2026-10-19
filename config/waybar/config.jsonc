@@ -5,15 +5,17 @@
 	"height": 32,
 	"spacing": 0,
 	"modules-left": ["sway/workspaces", "sway/scratchpad", "sway/mode"],
-	"modules-right": [
-		"custom/recording",
-		"tray",
+	"modules-center": [
 		"temperature",
 		"disk",
 		"cpu",
 		"memory",
 		"battery",
-		"backlight",
+		"backlight"
+	],	
+	"modules-right": [
+		"custom/recording",
+		"tray",
 		"custom/volume",
 		"custom/pomodoro",
 		"network",
