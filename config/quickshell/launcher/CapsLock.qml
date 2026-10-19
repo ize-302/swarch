@@ -51,24 +51,27 @@ Scope {
     // (and once to start). Every keyboard's, found again each time, so
     // keyboards plugged in later count. One process; a file reader
     // re-reading sysfs kept its old value.
+    //
+    // bash builtins only (the sleep one loaded from bash's loadables when
+    // there), so the loop forks nothing. It only writes on a change, so it
+    // would never notice the shell is gone: setpriv kills it with the shell.
     Process {
         id: watcher
 
-        command: ["python3", "-c", `
-import glob, time
-last = None
-while True:
-    lit = False
-    for path in glob.glob("/sys/class/leds/*::capslock/brightness"):
-        try:
-            with open(path) as file:
-                lit = lit or file.read().strip() not in ("", "0")
-        except OSError:
-            pass
-    if lit != last:
-        print(int(lit), flush=True)
-        last = lit
-    time.sleep(${Theme.capsLockPoll / 1000})
+        command: ["setpriv", "--pdeathsig", "KILL", "bash", "-c", `
+enable -f /usr/lib/bash/sleep sleep 2>/dev/null
+last=
+while :; do
+	lit=0
+	for path in /sys/class/leds/*::capslock/brightness; do
+		read -r value <"$path" 2>/dev/null && [ -n "$value" ] && [ "$value" != 0 ] && lit=1
+	done
+	if [ "$lit" != "$last" ]; then
+		echo "$lit"
+		last=$lit
+	fi
+	sleep ${Theme.capsLockPoll / 1000}
+done
 `]
         running: true
 

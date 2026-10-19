@@ -1,0 +1,54 @@
+#!/bin/bash
+# ~/.local/bin/wallpaper
+# ~/.local/bin/wallpaper --random
+# ~/.local/bin/wallpaper FILE
+# Sets the wallpaper on every output: with no argument the last one set again
+# (sway drops it on every reload, so config/sway/config runs this on each),
+# with --random (bound to a key in config/sway/config) a random image from
+# ~/Pictures/wallpapers other than the current one, or the given image. With
+# nothing set yet, a random one; with no images at all, swarch's own
+# (~/.local/share/swarch/default-wallpaper.jpg).
+#
+# The image's path is kept in ~/.local/state/swarch/wallpaper, which the lock
+# screen (config/quickshell/lock) reads too. The image is also copied to
+# /var/lib/sddm-wallpaper/current, which install.sh creates for this user, so
+# the login screen (config/sddm/themes/custom) can show it: SDDM can't read
+# $HOME.
+dir=~/Pictures/wallpapers
+default=~/.local/share/swarch/default-wallpaper.jpg
+share=/var/lib/sddm-wallpaper
+state=${XDG_STATE_HOME:-$HOME/.local/state}/swarch/wallpaper
+
+current=$(cat -- "$state" 2>/dev/null)
+
+# Never the current image again
+pick() {
+	find -L "$dir" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) 2>/dev/null |
+		grep -vxF -- "$current" | shuf -n1
+}
+
+case $1 in
+--random)
+	img=$(pick)
+	# The only image there: it stays
+	[ -n "$img" ] || img=$current
+	;;
+"")
+	img=$current
+	[ -f "$img" ] || img=$(pick)
+	;;
+*)
+	img=$(realpath -- "$1") || exit
+	;;
+esac
+[ -f "$img" ] || img=$default
+
+swaymsg -q "output * bg \"$img\" fill" || exit
+mkdir -p -- "${state%/*}"
+echo "$img" >"$state"
+
+# Renamed into place, so the greeter never reads half an image. Not again on
+# every reload.
+if [ -w "$share" ] && { [ "$img" != "$current" ] || [ ! -e "$share/current" ]; }; then
+	cp -f -- "$img" "$share/.current.tmp" && mv -f "$share/.current.tmp" "$share/current"
+fi

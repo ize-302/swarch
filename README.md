@@ -73,7 +73,8 @@ grouped by what uses each package, is at the top of `install.sh`. It covers:
 - SDDM.
 
 Wallpapers: put images in `~/Pictures/wallpapers`. One is picked at random
-every half hour, and Super+Shift+W moves to the next. Until there are any,
+the first time, and Super+Shift+W switches to another at random; it stays
+until then, across logins. Until there are any,
 swarch's own is used (`home/.local/share/swarch/default-wallpaper.jpg`).
 
 ## Install

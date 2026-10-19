@@ -252,7 +252,7 @@ if [ -d /usr/share/sddm/themes ] || [ -n "$dry" ]; then
   run sudo install -Dm644 etc/sddm.conf.d/custom-theme.conf /etc/sddm.conf.d/custom-theme.conf
   # Arranges the outputs for the greeter, needs xorg-xrandr
   run sudo install -Dm755 etc/sddm/Xsetup /etc/sddm/Xsetup
-  # Somewhere outside $HOME that SDDM can read, for ~/.local/bin/wallpaper-rotate
+  # Somewhere outside $HOME that SDDM can read, for ~/.local/bin/wallpaper
   # to copy the current wallpaper to
   run sudo install -d -m755 -o "$USER" -g "$(id -gn)" /var/lib/sddm-wallpaper
   # Until the first sway login puts a wallpaper there, the default

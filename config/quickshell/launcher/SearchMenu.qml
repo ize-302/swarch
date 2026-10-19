@@ -232,7 +232,8 @@ PanelWindow { // qmllint disable uncreatable-type
                     anchors.fill: parent
                     visible: window.strip
                     orientation: ListView.Horizontal
-                    model: window.strip ? window.results : []
+                    // Empty while closed, so no delegates are kept around
+                    model: window.strip && window.open ? window.results : []
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     highlightMoveDuration: 0
@@ -292,7 +293,9 @@ PanelWindow { // qmllint disable uncreatable-type
 
                     anchors.fill: parent
                     visible: !window.strip
-                    model: window.strip ? [] : window.results
+                    // Empty while closed: the app menu's rows for every
+                    // installed app took tens of MB while hidden
+                    model: window.strip || !window.open ? [] : window.results
                     spacing: Theme.rowSpacing
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds

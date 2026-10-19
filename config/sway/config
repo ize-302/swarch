@@ -57,8 +57,8 @@ shadows disable
 shadows_on_csd enable
 
 #
-# Random wallpaper from ~/Pictures/wallpapers, changed every 30 minutes
-exec_always ~/.local/bin/wallpaper-rotate
+# The wallpaper last set (a random one from ~/Pictures/wallpapers at first)
+exec_always ~/.local/bin/wallpaper
 
 # A window asking for attention (a link opened in the browser, a chat app
 # pinging) gets focused, instead of only turning its workspace red on the bar
@@ -160,8 +160,8 @@ exec paplay /usr/share/sounds/freedesktop/stereo/service-login.oga
 # Power menu
 bindsym $mod+Escape exec ~/.local/bin/power-menu
 
-# Next wallpaper now, rather than at the next 30 minutes
-bindsym $mod+Shift+w exec ~/.local/bin/wallpaper-rotate --next
+# A different random wallpaper
+bindsym $mod+Shift+w exec ~/.local/bin/wallpaper --random
 
 # Open a terminal
 bindsym $mod+Return exec $term

@@ -97,25 +97,24 @@ Scope {
 
     // Reads the keyboards' caps lock lights, as the launcher's caps lock
     // popup does (config/quickshell/launcher/CapsLock.qml), for the
-    // field's ⇪
+    // field's ⇪, with the same loop, which dies with the lock
     Process {
         id: capsWatcher
 
-        command: ["python3", "-c", `
-import glob, time
-last = None
-while True:
-    lit = False
-    for path in glob.glob("/sys/class/leds/*::capslock/brightness"):
-        try:
-            with open(path) as file:
-                lit = lit or file.read().strip() not in ("", "0")
-        except OSError:
-            pass
-    if lit != last:
-        print(int(lit), flush=True)
-        last = lit
-    time.sleep(${Theme.capsLockPoll / 1000})
+        command: ["setpriv", "--pdeathsig", "KILL", "bash", "-c", `
+enable -f /usr/lib/bash/sleep sleep 2>/dev/null
+last=
+while :; do
+	lit=0
+	for path in /sys/class/leds/*::capslock/brightness; do
+		read -r value <"$path" 2>/dev/null && [ -n "$value" ] && [ "$value" != 0 ] && lit=1
+	done
+	if [ "$lit" != "$last" ]; then
+		echo "$lit"
+		last=$lit
+	fi
+	sleep ${Theme.capsLockPoll / 1000}
+done
 `]
         running: true
 

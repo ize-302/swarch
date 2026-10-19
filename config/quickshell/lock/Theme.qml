@@ -31,9 +31,9 @@ Singleton {
     readonly property color errorColor: "#f7768e"
     readonly property color hoverColor: Qt.rgba(192 / 255, 202 / 255, 245 / 255, 0.12)
 
-    // The wallpaper ~/.local/bin/wallpaper-rotate last set on this sway
-    // session, blurred, with the background over it so the text stays legible
-    readonly property string wallpaperState: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/wallpaper-rotate." + (Quickshell.env("SWAYSOCK") ?? "").split("/").pop() + ".current"
+    // The wallpaper ~/.local/bin/wallpaper last set, blurred, with the
+    // background over it so the text stays legible
+    readonly property string wallpaperState: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/swarch/wallpaper"
     // Loaded at this fraction of the screen's size, which blurs smoother
     readonly property real wallpaperScale: 0.25
     readonly property real wallpaperBlur: 1.0

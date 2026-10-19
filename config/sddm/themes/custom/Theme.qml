@@ -10,7 +10,7 @@ import QtQuick
 QtObject {
     readonly property string fontFamily: "Adwaita Sans"
     readonly property color background: "#15161e"
-    // The last wallpaper ~/.local/bin/wallpaper-rotate set, which it copies
+    // The last wallpaper ~/.local/bin/wallpaper set, which it copies
     // here as SDDM can't read $HOME; blurred and tinted as on the lock
     // screen. Without it, the background with the glass's sheen fading down
     // from the top.

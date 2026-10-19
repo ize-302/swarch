@@ -45,8 +45,8 @@
 	<name>Set as Wallpaper</name>
 	<submenu></submenu>
 	<unique-id>1760795000000003-1</unique-id>
-	<command>swaymsg output "*" bg %f fill</command>
-	<description>Until the next wallpaper rotation</description>
+	<command>sh -c 'exec ~/.local/bin/wallpaper "$1"' _ %f</command>
+	<description>Kept until another is set, the lock and login screens too</description>
 	<range>1-1</range>
 	<patterns>*</patterns>
 	<image-files/>
