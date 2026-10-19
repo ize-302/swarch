@@ -16,8 +16,9 @@ import qs
 // (DatePanel.qml), the volume popup (Osd.qml),
 // the notifications
 // (Notifications.qml), the bluetooth pairing prompts (BluetoothAgent.qml)
-// the caps lock popup (CapsLock.qml), the bar's volume (BarVolume.qml) and
-// the pomodoro timer (Pomodoro.qml).
+// the caps lock popup (CapsLock.qml), the bar's volume (BarVolume.qml),
+// the pomodoro timer (Pomodoro.qml) and the polkit password prompt
+// (PolkitPrompt.qml).
 ShellRoot {
     id: root
 
@@ -240,6 +241,8 @@ ShellRoot {
     }
 
     BluetoothAgent {}
+
+    PolkitPrompt {}
 
     CapsLock {}
 

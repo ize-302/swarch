@@ -88,17 +88,15 @@ exec_always gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'
 exec wl-paste --type text --watch cliphist store
 exec wl-paste --type image --watch cliphist store
 
-# Asks for your password when an app needs it (saving a Wi-Fi network in
-# nm-connection-editor, some of blueman's settings)
-exec /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
-
 # App launcher, power menu, clipboard menu, scratchpad menu, key bindings
 # menu and control panel daemon, toggled by ~/.local/bin/app-menu ($menu),
 # ~/.local/bin/power-menu, ~/.local/bin/clipboard-menu,
 # ~/.local/bin/scratchpad-menu, ~/.local/bin/keybind-menu,
 # ~/.local/bin/control-panel, ~/.local/bin/notification-center and
-# ~/.local/bin/date-panel. It also shows the volume popup, the bluetooth pairing prompts
-# and the notifications (in place of dunst).
+# ~/.local/bin/date-panel. It also shows the volume popup, the bluetooth pairing prompts,
+# the notifications (in place of dunst) and the password prompt apps ask for
+# through polkit (saving a Wi-Fi network in nm-connection-editor, mounting a
+# disk), as the session's polkit agent.
 exec qs -c launcher -d
 
 # Outputs (where each display goes, its scale) are your own settings: they go

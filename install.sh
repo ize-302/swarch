@@ -64,8 +64,6 @@ repo_packages=(
   # blueman, and the pairing agent (built from src/bluetooth-agent.c)
   networkmanager nm-connection-editor bluez bluez-utils blueman
   gcc pkgconf
-  # Asks for passwords for apps that need them (started in config/sway/config)
-  polkit-gnome
   # Apps the bar and keys open; alacritty opens in tmux
   alacritty tmux btop
   # The file manager: trash and network places (gvfs), thumbnails (tumbler,
