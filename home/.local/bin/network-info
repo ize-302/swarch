@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/bin/bash
 # ~/.local/bin/network-info
 # What the launcher's control panel (~/.config/quickshell/launcher) can't get
 # from Quickshell about Wi-Fi, done with nmcli:
@@ -21,178 +21,228 @@
 # show prints {"ssid", "uuid", "autoconnect", "connected", "device",
 # "security", "signal", "frequency", "rate", "ip", "gateway", "dns", "mac"};
 # whatever isn't known (not saved, not in range, not connected) is left out.
-import json
-import re
-import subprocess
-import sys
 
+# $1 as a JSON string, quotes and all
+json() {
+	local s=$1 c i out=
+	s=${s//\\/\\\\}
+	s=${s//\"/\\\"}
+	s=${s//$'\n'/\\n}
+	s=${s//$'\t'/\\t}
+	s=${s//$'\r'/\\r}
+	# Any other control character, which an SSID can hold
+	if [[ $s == *[$'\x01'-$'\x1f']* ]]; then
+		for ((i = 0; i < ${#s}; i++)); do
+			c=${s:i:1}
+			if [[ $c == [$'\x01'-$'\x1f'] ]]; then
+				printf -v c '\\u%04x' "'$c"
+			fi
+			out+=$c
+		done
+		s=$out
+	fi
+	printf '"%s"' "$s"
+}
 
-def nmcli(*args, stdin=None):
-    result = subprocess.run(["nmcli", *args], capture_output=True, text=True, input=stdin)
-    return result.returncode, result.stdout, result.stderr
+# Splits a line of nmcli's terse output into F, on ':' but not on '\:'
+fields() {
+	local s=${1//\\\\/$'\x02'} i
+	s=${s//\\:/$'\x01'}
+	IFS=: read -ra F <<<"$s"
+	for i in "${!F[@]}"; do
+		F[i]=${F[i]//$'\x01'/:}
+		F[i]=${F[i]//$'\x02'/\\}
+	done
+}
 
+# Whether iwd is what connects (it can't run beside wpa_supplicant)
+iwd_backend() {
+	systemctl is-active --quiet iwd
+}
 
-def iwd_backend():
-    """Whether iwd is what connects (it can't run beside wpa_supplicant)."""
-    return subprocess.run(["systemctl", "is-active", "--quiet", "iwd"]).returncode == 0
+# An iwctl station command, given the password rather than asking: sets
+# code and error
+iwctl_station() {
+	local device=$1 password=$2
+	shift 2
+	local command=(iwctl --dont-ask)
+	[ -n "$password" ] && command+=(--passphrase "$password")
+	# iwctl colours its messages
+	error=$("${command[@]}" station "$device" "$@" 2>&1)
+	code=$?
+	error=$(sed $'s/\e\\[[0-9;]*m//g' <<<"$error")
+	error=$(trim "$error")
+	if [ "$code" -ne 0 ] && { [ "$error" = "Operation failed" ] || [ "$error" = "Operation aborted" ]; }; then
+		error="Couldn't connect. Check the password."
+	fi
+}
 
+trim() {
+	local s=$1
+	s=${s#"${s%%[![:space:]]*}"}
+	printf '%s' "${s%"${s##*[![:space:]]}"}"
+}
 
-def iwctl(device, password, *args):
-    """An iwctl station command, given the password rather than asking."""
-    command = ["iwctl", "--dont-ask"]
-    if password:
-        command += ["--passphrase", password]
-    result = subprocess.run([*command, "station", device, *args], capture_output=True, text=True)
-    # iwctl colours its messages
-    error = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout + result.stderr).strip()
-    if result.returncode and error in ("Operation failed", "Operation aborted"):
-        error = "Couldn't connect. Check the password."
-    return result.returncode, error
+wifi_device() {
+	local line
+	while IFS= read -r line; do
+		fields "$line"
+		if [ "${F[1]}" = wifi ]; then
+			printf '%s' "${F[0]}"
+			return 0
+		fi
+	done < <(nmcli -t -f DEVICE,TYPE device)
+	return 1
+}
 
+report() {
+	local code=$1 error
+	if [ "$code" -eq 0 ]; then
+		echo '{"ok": true, "error": ""}'
+		return
+	fi
+	error=$(trim "$2")
+	error=${error#"Error: "}
+	[ -n "$error" ] || error="Couldn't connect"
+	echo "{\"ok\": false, \"error\": $(json "$error")}"
+}
 
-def wifi_device():
-    _, out, _ = nmcli("-t", "-f", "DEVICE,TYPE", "device")
-    return next((fields(line)[0] for line in out.splitlines() if fields(line)[1] == "wifi"), None)
+# The saved connection for an SSID: sets uuid and autoconnect, or fails
+saved_connection() {
+	local ssid=$1 line setting id auto
+	while IFS= read -r line; do
+		fields "$line"
+		[ "${F[1]}" = 802-11-wireless ] || continue
+		id=${F[0]} auto=${F[2]}
+		# -g escapes the value like -t: a ':' in the name comes as '\:'
+		setting=$(nmcli -g 802-11-wireless.ssid connection show "$id")
+		fields "$(trim "$setting")"
+		setting=$(IFS=:; printf '%s' "${F[*]}")
+		if [ "$setting" = "$ssid" ]; then
+			uuid=$id
+			autoconnect=$auto
+			return 0
+		fi
+	done < <(nmcli -t -f UUID,TYPE,AUTOCONNECT connection show)
+	return 1
+}
 
+show() {
+	local ssid=$1 line info dns=() connected=false
+	local best_use= best_signal=-1 freq rate security device
+	info=("\"ssid\": $(json "$ssid")")
 
-def report(code, error):
-    print(json.dumps({"ok": code == 0, "error": "" if code == 0 else error.strip().removeprefix("Error: ") or "Couldn't connect"}))
+	if saved_connection "$ssid"; then
+		info+=("\"uuid\": $(json "$uuid")")
+		[ "$autoconnect" = yes ] && info+=('"autoconnect": true') || info+=('"autoconnect": false')
+	fi
 
+	# In range: signal, band and security from the last scan; the one in
+	# use, else the strongest
+	while IFS= read -r line; do
+		fields "$line"
+		[ "${F[1]}" = "$ssid" ] || continue
+		local use=0 signal=${F[2]:-0}
+		[ "${F[0]}" = '*' ] && use=1
+		if [ -z "$best_use" ] || [ "$use" -gt "$best_use" ] || { [ "$use" -eq "$best_use" ] && [ "$signal" -gt "$best_signal" ]; }; then
+			best_use=$use best_signal=$signal freq=${F[3]} rate=${F[4]} security=${F[5]} device=${F[6]}
+		fi
+	done < <(nmcli -t -f IN-USE,SSID,SIGNAL,FREQ,RATE,SECURITY,DEVICE device wifi list --rescan no)
+	if [ -n "$best_use" ]; then
+		info+=("\"signal\": $best_signal" "\"frequency\": $(json "$freq")" "\"rate\": $(json "$rate")" "\"security\": $(json "${security:-Open}")")
+		if [ "$best_use" = 1 ]; then
+			connected=true
+			info+=("\"device\": $(json "$device")")
+		fi
+	fi
+	info+=("\"connected\": $connected")
 
-def fields(line):
-    """Splits nmcli's terse output on ':' but not on '\\:'."""
-    parts, current, escaped = [], "", False
-    for char in line:
-        if escaped:
-            current += char
-            escaped = False
-        elif char == "\\":
-            escaped = True
-        elif char == ":":
-            parts.append(current)
-            current = ""
-        else:
-            current += char
-    parts.append(current)
-    return parts
+	# Connected: the addresses
+	if [ "$connected" = true ]; then
+		local key value ip=
+		while IFS= read -r line; do
+			key=${line%%:*}
+			value=${line#*:}
+			case $key in
+			GENERAL.HWADDR) info+=("\"mac\": $(json "$value")") ;;
+			IP4.ADDRESS*) [ -z "$ip" ] && ip=${value%%/*} && info+=("\"ip\": $(json "$ip")") ;;
+			IP4.GATEWAY) [ -n "$value" ] && info+=("\"gateway\": $(json "$value")") ;;
+			IP4.DNS*) dns+=("$(json "$value")") ;;
+			esac
+		done < <(nmcli -t -f GENERAL.HWADDR,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS device show "$device")
+		if [ ${#dns[@]} -gt 0 ]; then
+			local IFS=,
+			info+=("\"dns\": [${dns[*]}]")
+		fi
+	fi
 
+	local out= part
+	for part in "${info[@]}"; do
+		out+=${out:+, }$part
+	done
+	echo "{$out}"
+}
 
-def saved_connection(ssid):
-    """The saved connection for an SSID: (uuid, autoconnect), or None."""
-    _, out, _ = nmcli("-t", "-f", "UUID,TYPE,AUTOCONNECT", "connection", "show")
-    for line in out.splitlines():
-        uuid, kind, autoconnect = fields(line)[:3]
-        if kind != "802-11-wireless":
-            continue
-        _, setting, _ = nmcli("-g", "802-11-wireless.ssid", "connection", "show", uuid)
-        if setting.strip() == ssid:
-            return uuid, autoconnect == "yes"
-    return None
-
-
-def show(ssid):
-    info = {"ssid": ssid, "connected": False}
-
-    saved = saved_connection(ssid)
-    if saved:
-        info["uuid"], info["autoconnect"] = saved
-
-    # In range: signal, band and security from the last scan
-    _, out, _ = nmcli("-t", "-f", "IN-USE,SSID,SIGNAL,FREQ,RATE,SECURITY,DEVICE", "device", "wifi", "list", "--rescan", "no")
-    best = None
-    for line in out.splitlines():
-        in_use, name, signal, freq, rate, security, device = fields(line)[:7]
-        if name != ssid:
-            continue
-        entry = (in_use == "*", int(signal or 0), freq, rate, security, device)
-        if best is None or entry[:2] > best[:2]:
-            best = entry
-    if best:
-        in_use, signal, freq, rate, security, device = best
-        info.update(signal=signal, frequency=freq, rate=rate, security=security or "Open")
-        if in_use:
-            info.update(connected=True, device=device)
-
-    # Connected: the addresses
-    if info["connected"]:
-        _, out, _ = nmcli("-t", "-f", "GENERAL.HWADDR,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS", "device", "show", info["device"])
-        dns = []
-        for line in out.splitlines():
-            key, _, value = line.partition(":")
-            if key == "GENERAL.HWADDR":
-                info["mac"] = value
-            elif key.startswith("IP4.ADDRESS") and "ip" not in info:
-                info["ip"] = value.split("/")[0]
-            elif key == "IP4.GATEWAY" and value:
-                info["gateway"] = value
-            elif key.startswith("IP4.DNS"):
-                dns.append(value)
-        if dns:
-            info["dns"] = dns
-
-    print(json.dumps(info))
-
-
-def autoconnect(uuid, value):
-    code, _, err = nmcli("connection", "modify", uuid, "connection.autoconnect", value)
-    if code:
-        sys.exit(err.strip())
-
+set_autoconnect() {
+	local err
+	if ! err=$(nmcli connection modify "$1" connection.autoconnect "$2" 2>&1 >/dev/null); then
+		trim "$err" >&2
+		echo >&2
+		exit 1
+	fi
+}
 
 # nmcli and iwctl only take the password as an argument; it's on the
 # command line (and in `ps`) for the moment connecting takes
 
+join() {
+	local ssid=$1 password device err code
+	IFS= read -r password
+	device=$(wifi_device) || { echo "No Wi-Fi device" >&2; exit 1; }
+	if iwd_backend; then
+		iwctl_station "$device" "$password" connect-hidden "$ssid"
+		report "$code" "$error"
+		return
+	fi
+	local args=(device wifi connect "$ssid" ifname "$device" hidden yes)
+	[ -n "$password" ] && args+=(password "$password")
+	err=$(nmcli "${args[@]}" 2>&1 >/dev/null)
+	report $? "$err"
+}
 
-def join(ssid):
-    password = sys.stdin.readline().rstrip("\n")
-    device = wifi_device()
-    if device is None:
-        sys.exit("No Wi-Fi device")
-    if iwd_backend():
-        report(*iwctl(device, password, "connect-hidden", ssid))
-        return
-    args = ["device", "wifi", "connect", ssid, "ifname", device, "hidden", "yes"]
-    if password:
-        args += ["password", password]
-    code, _, err = nmcli(*args)
-    report(code, err)
+connect() {
+	local ssid=$1 password device err saved=
+	IFS= read -r password
+	device=$(wifi_device) || { echo "No Wi-Fi device" >&2; exit 1; }
+	saved_connection "$ssid" && saved=$uuid
+	# The saved connection keeps the new password too, for nmcli
+	if [ -n "$saved" ]; then
+		if ! err=$(nmcli connection modify "$saved" 802-11-wireless-security.psk "$password" 2>&1 >/dev/null); then
+			report 1 "$err"
+			return
+		fi
+	fi
+	if iwd_backend; then
+		iwctl_station "$device" "$password" connect "$ssid"
+		report "$code" "$error"
+	elif [ -n "$saved" ]; then
+		err=$(nmcli connection up "$saved" 2>&1 >/dev/null)
+		report $? "$err"
+	else
+		err=$(nmcli device wifi connect "$ssid" ifname "$device" password "$password" 2>&1 >/dev/null)
+		report $? "$err"
+	fi
+}
 
+usage() {
+	echo "usage: network-info show <ssid> | autoconnect <uuid> yes|no | join <ssid> | connect <ssid>" >&2
+	exit 1
+}
 
-def connect(ssid):
-    password = sys.stdin.readline().rstrip("\n")
-    device = wifi_device()
-    if device is None:
-        sys.exit("No Wi-Fi device")
-    saved = saved_connection(ssid)
-    # The saved connection keeps the new password too, for nmcli
-    if saved:
-        code, _, err = nmcli("connection", "modify", saved[0], "802-11-wireless-security.psk", password)
-        if code:
-            report(code, err)
-            return
-    if iwd_backend():
-        report(*iwctl(device, password, "connect", ssid))
-    elif saved:
-        code, _, err = nmcli("connection", "up", saved[0])
-        report(code, err)
-    else:
-        code, _, err = nmcli("device", "wifi", "connect", ssid, "ifname", device, "password", password)
-        report(code, err)
-
-
-def main():
-    command, rest = (sys.argv[1], sys.argv[2:]) if len(sys.argv) > 1 else ("", [])
-    if command == "show" and len(rest) == 1:
-        show(rest[0])
-    elif command == "connect" and len(rest) == 1:
-        connect(rest[0])
-    elif command == "autoconnect" and len(rest) == 2 and rest[1] in ("yes", "no"):
-        autoconnect(*rest)
-    elif command == "join" and len(rest) == 1:
-        join(rest[0])
-    else:
-        sys.exit(__doc__ or "usage: network-info show <ssid> | autoconnect <uuid> yes|no | join <ssid> | connect <ssid>")
-
-
-if __name__ == "__main__":
-    main()
+case $1:$# in
+show:2) show "$2" ;;
+connect:2) connect "$2" ;;
+autoconnect:3) [[ $3 == yes || $3 == no ]] || usage; set_autoconnect "$2" "$3" ;;
+join:2) join "$2" ;;
+*) usage ;;
+esac

@@ -63,7 +63,7 @@ repo_packages=(
   # Network and Bluetooth: the control panel, nm-connection-editor (Super+N),
   # blueman, and the pairing agent (built from src/bluetooth-agent.c)
   networkmanager nm-connection-editor bluez bluez-utils blueman
-  python gcc pkgconf
+  gcc pkgconf
   # Asks for passwords for apps that need them (started in config/sway/config)
   polkit-gnome
   # Apps the bar and keys open; alacritty opens in tmux

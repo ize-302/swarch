@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/bin/bash
 # ~/.local/bin/bluetooth-audio
 # A bluetooth audio device's profiles, for the launcher's control panel
 # (~/.config/quickshell/launcher): high-quality audio (A2DP) or the headset
@@ -9,70 +9,97 @@
 #                                             [{"name", "label", "codec"}]},
 #                                             or {} if it has no audio
 #   bluetooth-audio set <address> <profile>
-import json
-import re
-import subprocess
-import sys
 
+# pactl's own words, untranslated: the codec is read out of them
+export LC_ALL=C
 
-def card(address):
-    result = subprocess.run(["pactl", "-f", "json", "list", "cards"], capture_output=True, text=True)
-    try:
-        cards = json.loads(result.stdout)
-    except json.JSONDecodeError:
-        return None
-    wanted = address.upper()
-    for entry in cards:
-        props = entry.get("properties", {})
-        if props.get("api.bluez5.address", "").upper() == wanted or entry.get("name", "").upper().endswith(wanted.replace(":", "_")):
-            return entry
-    return None
+# $1 as a JSON string, quotes and all
+json() {
+	local s=$1
+	s=${s//\\/\\\\}
+	s=${s//\"/\\\"}
+	printf '"%s"' "$s"
+}
 
+# The device's card from `pactl list cards`: sets card, active and profiles
+# (each "name: description (sinks: …, priority: …, available: …)"), or fails
+find_card() {
+	local wanted=${1^^} line section= name= address= current= list=()
+	matches() {
+		[ -n "$name" ] && { [ "${address^^}" = "$wanted" ] || [[ ${name^^} == *"${wanted//:/_}" ]]; }
+	}
+	while IFS= read -r line; do
+		case $line in
+		"Card #"*)
+			if matches; then break; fi
+			name= address= current= list=() section=
+			;;
+		$'\tName: '*) name=${line#$'\tName: '} ;;
+		$'\tActive Profile: '*) current=${line#$'\tActive Profile: '} section= ;;
+		$'\t\t'*)
+			line=${line#$'\t\t'}
+			case $section in
+			Properties) [[ $line == 'api.bluez5.address = "'*'"' ]] && address=${line#*\"} address=${address%\"} ;;
+			Profiles) list+=("$line") ;;
+			esac
+			;;
+		$'\t'*:) section=${line#$'\t'} section=${section%:} ;;
+		$'\t'*) section= ;;
+		esac
+	done < <(pactl list cards)
+	matches || return 1
+	card=$name
+	active=$current
+	profiles=("${list[@]}")
+}
 
-# "High Fidelity Playback (A2DP Sink, codec AAC)" -> ("High-quality audio", "AAC")
-def describe(name, description):
-    codec = re.search(r"codec ([^)]+)\)", description or "")
-    codec = codec.group(1) if codec else ""
-    if name.startswith("a2dp"):
-        return "High-quality audio", codec
-    if name.startswith("headset"):
-        return "Headset with mic", codec
-    return description or name, ""
+show() {
+	if ! find_card "$1"; then
+		echo "{}"
+		return
+	fi
+	local line name description priority available label codec rows=()
+	for line in "${profiles[@]}"; do
+		name=${line%%: *}
+		[[ ${line#*: } =~ ^(.*)\ \(sinks:\ [0-9]+,\ sources:\ [0-9]+,\ priority:\ ([0-9]+),\ available:\ ([a-z]+)\)$ ]] || continue
+		description=${BASH_REMATCH[1]} priority=${BASH_REMATCH[2]} available=${BASH_REMATCH[3]}
+		[ "$name" = off ] || [ "$available" = no ] && continue
 
+		# "High Fidelity Playback (A2DP Sink, codec AAC)" -> "High-quality audio", "AAC"
+		codec=
+		[[ $description =~ codec\ ([^\)]+)\) ]] && codec=${BASH_REMATCH[1]}
+		case $name in
+		a2dp*) label="High-quality audio" ;;
+		headset*) label="Headset with mic" ;;
+		*) label=${description:-$name} codec= ;;
+		esac
+		# High-quality first, then the headset modes; best codec first in each
+		local group=1
+		[[ $name == a2dp* ]] && group=0
+		rows+=("$group"$'\t'"$priority"$'\t'"{\"name\": $(json "$name"), \"label\": $(json "$label"), \"codec\": $(json "$codec")}")
+	done
 
-def show(address):
-    entry = card(address)
-    if entry is None:
-        print("{}")
-        return
-    profiles = []
-    for name, profile in entry.get("profiles", {}).items():
-        if name == "off" or not profile.get("available", True):
-            continue
-        label, codec = describe(name, profile.get("description", ""))
-        profiles.append({"name": name, "label": label, "codec": codec, "priority": profile.get("priority", 0)})
-    # High-quality first, then the headset modes; best codec first in each
-    profiles.sort(key=lambda profile: (not profile["name"].startswith("a2dp"), -profile["priority"]))
-    for profile in profiles:
-        del profile["priority"]
-    print(json.dumps({"card": entry["name"], "active": entry.get("active_profile", ""), "profiles": profiles}))
+	local out= row
+	while IFS= read -r row; do
+		[ -n "$row" ] && out+=${out:+, }${row#*$'\t'*$'\t'}
+	done < <(printf '%s\n' "${rows[@]}" | sort -s -t $'\t' -k1,1n -k2,2nr)
+	echo "{\"card\": $(json "$card"), \"active\": $(json "$active"), \"profiles\": [$out]}"
+}
 
+set_profile() {
+	if ! find_card "$1"; then
+		echo "No audio for $1" >&2
+		exit 1
+	fi
+	pactl set-card-profile "$card" "$2"
+	exit 0
+}
 
-def set_profile(address, profile):
-    entry = card(address)
-    if entry is None:
-        sys.exit("No audio for " + address)
-    subprocess.run(["pactl", "set-card-profile", entry["name"], profile], check=False)
-
-
-def main():
-    if len(sys.argv) == 3 and sys.argv[1] == "show":
-        show(sys.argv[2])
-    elif len(sys.argv) == 4 and sys.argv[1] == "set":
-        set_profile(sys.argv[2], sys.argv[3])
-    else:
-        sys.exit("usage: bluetooth-audio show <address> | set <address> <profile>")
-
-
-if __name__ == "__main__":
-    main()
+case $1:$# in
+show:2) show "$2" ;;
+set:3) set_profile "$2" "$3" ;;
+*)
+	echo "usage: bluetooth-audio show <address> | set <address> <profile>" >&2
+	exit 1
+	;;
+esac

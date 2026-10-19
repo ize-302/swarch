@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/bin/bash
 # ~/.local/bin/bar-anchor <x> <bar-top> <bar-height>
 # The middle of the bar module at x (global layout coordinates), for the
 # launcher's popups (~/.config/quickshell/launcher) to point their arrow at:
@@ -7,72 +7,100 @@
 # text (pixels well above the bar's dark background) in columns, joins the
 # ones close enough to be one module, and prints the middle of the one at or
 # nearest x. Prints x unchanged when there's nothing near.
-import subprocess
-import sys
+#
+# Grabbed at scale 1 (-s 1), so a pixel is a unit of layout whatever the
+# output's scale.
 
 # How far either side of x to look, how close two runs of ink have to be to
 # count as one module (the space between a glyph and its number), and how far
 # the module may be from x
-REACH = 48
-JOIN = 11
-NEAREST = 24
+reach=48
+join=11
+nearest=24
 
+x=${1%%.*} top=${2%%.*} height=${3%%.*}
+left=$((x > reach ? x - reach : 0))
 
-def main():
-    x, top, height = (int(float(value)) for value in sys.argv[1:4])
-    left = max(0, x - REACH)
-    width = REACH * 2
-    result = subprocess.run(["grim", "-t", "ppm", "-g", f"{left},{top} {width}x{height}", "-"], capture_output=True)
-    data = result.stdout
-    if result.returncode or not data.startswith(b"P6"):
-        print(x)
-        return
+# The image's bytes as numbers, header and all
+grim -s 1 -t ppm -g "$left,$top $((reach * 2))x$height" - 2>/dev/null | od -An -tu1 -v |
+	awk -v x="$x" -v left="$left" -v join="$join" -v nearest="$nearest" '
+	{ for (i = 1; i <= NF; i++) byte[n++] = $i }
 
-    # P6 header: magic, width, height, max value, then RGB bytes
-    fields, at = [], 2
-    while len(fields) < 3:
-        while data[at:at + 1].isspace():
-            at += 1
-        if data[at:at + 1] == b"#":
-            at = data.index(b"\n", at)
-            continue
-        end = at
-        while not data[end:end + 1].isspace():
-            end += 1
-        fields.append(int(data[at:end]))
-        at = end
-    w, h = fields[0], fields[1]
-    pixels = data[at + 1:]
+	function brightness(px, py,    i, r, g, b) {
+		i = start + (py * w + px) * 3
+		r = byte[i]; g = byte[i + 1]; b = byte[i + 2]
+		return r > g ? (r > b ? r : b) : (g > b ? g : b)
+	}
 
-    def brightness(px, py):
-        i = (py * w + px) * 3
-        return max(pixels[i], pixels[i + 1], pixels[i + 2])
+	# Rounds half to even, as Python does
+	function round(v,    whole) {
+		whole = int(v)
+		if (v - whole != 0.5)
+			return int(v + 0.5)
+		return whole % 2 ? whole + 1 : whole
+	}
 
-    # The background: the darkest of the middle row
-    middle = h // 2
-    background = min(brightness(px, middle) for px in range(w))
-    rows = range(h // 5, h - h // 5)
-    ink = [any(brightness(px, py) > background + 60 for py in rows) for px in range(w)]
+	END {
+		# P6 header: magic, width, height, max value, then RGB bytes
+		if (n < 2 || byte[0] != 80 || byte[1] != 54) { print x; exit }
+		at = 2
+		fields = 0
+		while (fields < 3 && at < n) {
+			c = byte[at]
+			if (c == 32 || (c >= 9 && c <= 13)) { at++; continue }
+			if (c == 35) { while (at < n && byte[at] != 10) at++; continue }
+			value = 0
+			while (at < n && byte[at] >= 48 && byte[at] <= 57)
+				value = value * 10 + byte[at++] - 48
+			field[fields++] = value
+		}
+		w = field[0]; h = field[1]
+		start = at + 1
+		if (w <= 0 || h <= 0 || start + w * h * 3 > n) { print x; exit }
 
-    runs, start = [], None
-    for px, on in enumerate(ink + [False]):
-        if on and start is None:
-            start = px
-        elif not on and start is not None:
-            if runs and start - runs[-1][1] <= JOIN:
-                runs[-1][1] = px - 1
-            else:
-                runs.append([start, px - 1])
-            start = None
+		# The background: the darkest of the middle row
+		middle = int(h / 2)
+		background = 256
+		for (px = 0; px < w; px++)
+			if ((v = brightness(px, middle)) < background)
+				background = v
+		for (px = 0; px < w; px++) {
+			ink[px] = 0
+			for (py = int(h / 5); py < h - int(h / 5); py++)
+				if (brightness(px, py) > background + 60) { ink[px] = 1; break }
+		}
+		ink[w] = 0
 
-    target = x - left
-    best = None
-    for a, b in runs:
-        distance = 0 if a <= target <= b else min(abs(target - a), abs(target - b))
-        if distance <= NEAREST and (best is None or distance < best[0]):
-            best = (distance, (a + b) / 2)
-    print(round(left + best[1]) if best else x)
+		runs = 0
+		on = -1
+		for (px = 0; px <= w; px++) {
+			if (ink[px] && on < 0)
+				on = px
+			else if (!ink[px] && on >= 0) {
+				if (runs && on - b[runs] <= join)
+					b[runs] = px - 1
+				else {
+					runs++
+					a[runs] = on; b[runs] = px - 1
+				}
+				on = -1
+			}
+		}
 
-
-if __name__ == "__main__":
-    main()
+		target = x - left
+		best = -1
+		for (r = 1; r <= runs; r++) {
+			if (a[r] <= target && target <= b[r])
+				distance = 0
+			else {
+				distance = target - a[r]; if (distance < 0) distance = -distance
+				d = target - b[r]; if (d < 0) d = -d
+				if (d < distance) distance = d
+			}
+			if (distance <= nearest && (best < 0 || distance < best)) {
+				best = distance
+				mid = (a[r] + b[r]) / 2
+			}
+		}
+		print best >= 0 ? round(left + mid) : x
+	}'
