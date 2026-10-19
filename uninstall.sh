@@ -13,5 +13,5 @@ if [ -d /usr/share/sddm/themes/custom ]; then
   echo "[+] Removing SDDM theme..."
   sudo rm -r /usr/share/sddm/themes/custom
   sudo rm -f /etc/sddm.conf.d/custom-theme.conf
-  sudo rm -f /etc/sddm/Xsetup
+  sudo rm -f /etc/sddm/sway.conf /etc/sddm/Xsetup
 fi
