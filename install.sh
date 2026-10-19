@@ -61,9 +61,9 @@ repo_packages=(
   # Notifications (notify-send)
   libnotify
   # Network and Bluetooth: the control panel, nm-connection-editor (Super+N),
-  # blueman, and the pairing agent (home/.local/bin/bluetooth-agent)
+  # blueman, and the pairing agent (built from src/bluetooth-agent.c)
   networkmanager nm-connection-editor bluez bluez-utils blueman
-  python python-dbus python-gobject
+  python gcc pkgconf
   # Asks for passwords for apps that need them (started in config/sway/config)
   polkit-gnome
   # Apps the bar and keys open; alacritty opens in tmux
@@ -134,6 +134,12 @@ if [ -n "$packages" ]; then
 fi
 
 command -v stow >/dev/null || { note "stow isn't installed (run without --no-packages)."; [ -n "$dry" ] || exit 1; }
+
+# --- Build ------------------------------------------------------------------
+
+# The Bluetooth pairing agent, into home/ so it's linked with the rest
+say "Building the Bluetooth pairing agent"
+run cc -std=c11 -D_GNU_SOURCE -O2 -Wall -o home/.local/bin/bluetooth-agent src/bluetooth-agent.c $(pkg-config --cflags --libs libsystemd)
 
 # --- Links ------------------------------------------------------------------
 

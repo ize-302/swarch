@@ -2,3 +2,5 @@
 config/quickshell/*/.qmlls.ini
 # Your own sway settings (see the end of config/sway/config)
 config/sway/config.d/
+# Built by install.sh from src/bluetooth-agent.c
+home/.local/bin/bluetooth-agent
