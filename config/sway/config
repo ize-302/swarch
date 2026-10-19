@@ -42,7 +42,7 @@ shadow_blur_radius 12
 shadow_color #00000059
 shadow_offset 0 3
 
-corner_radius 3
+corner_radius 1
 
 gaps inner 10
 
