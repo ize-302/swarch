@@ -60,6 +60,11 @@ shadows_on_csd enable
 # Random wallpaper from ~/Pictures/wallpapers, changed every 30 minutes
 exec_always ~/.local/bin/wallpaper-rotate
 
+# A window asking for attention (a link opened in the browser, a chat app
+# pinging) gets focused, instead of only turning its workspace red on the bar
+focus_on_window_activation focus
+exec ~/.local/bin/focus-urgent
+
 # Startup apps: browser on workspace 2, terminal on workspace 1 (left focused).
 # Sway places each window on the workspace it was launched from.
 exec swaymsg "workspace number 1; exec $term"

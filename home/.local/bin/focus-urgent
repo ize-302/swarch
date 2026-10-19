@@ -1,0 +1,34 @@
+#!/bin/bash
+# ~/.local/bin/focus-urgent
+# Focuses a window as soon as it asks for attention (a terminal's bell, a
+# chat app pinging), so it doesn't sit there with its workspace red on the
+# bar. Sway's focus_on_window_activation (config/sway/config) only covers
+# windows that ask to be activated; this catches the rest, which only set
+# their urgency hint. Started once per sway session and exits with it.
+#
+# Sway's own criteria pick the window: the newest urgent one. One hidden in
+# the scratchpad (no workspace) comes out of it, tiled, onto the first
+# workspace number nothing is using. When the urgency was just cleared
+# nothing matches and the focus stays put.
+
+# The lowest workspace number that doesn't exist yet: sway only keeps the
+# focused workspace and ones with windows, so it's empty
+free_workspace() {
+	local used n=1
+	used=$(swaymsg -r -t get_workspaces)
+	while [[ $used == *"\"num\": $n,"* ]]; do
+		n=$((n + 1))
+	done
+	echo "$n"
+}
+
+swaymsg -r -t subscribe -m '["window"]' | while read -r event; do
+	case $event in
+	*'"change": "urgent"'*)
+		swaymsg -q '[urgent=latest workspace=.] focus' && continue
+		swaymsg -q '[urgent=latest] nop' || continue
+		n=$(free_workspace)
+		swaymsg -q "[urgent=latest] scratchpad show, floating disable, move container to workspace number $n, focus"
+		;;
+	esac
+done
