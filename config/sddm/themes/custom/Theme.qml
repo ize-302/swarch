@@ -111,12 +111,12 @@ QtObject {
     readonly property int powerIconSize: 20
 
     // The user, session and power menus: the launcher's rows
-    readonly property int menuRadius: 8
+    readonly property int menuRadius: 4
     readonly property int menuPadding: 6
     readonly property int menuWidth: 220
     readonly property int rowHeight: 32
     readonly property int rowPadding: 10
-    readonly property int rowRadius: 4
+    readonly property int rowRadius: 2
     readonly property int menuGap: 6
     readonly property string checkIcon: ""
 
