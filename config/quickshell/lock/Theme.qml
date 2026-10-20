@@ -63,8 +63,8 @@ Singleton {
     readonly property real promptBottom: 0.16
     readonly property int promptSpacing: 12
 
-    // Password field: white, with the menus' corners, the submit button and
-    // caps lock inside it, and the background's colour for its text
+    // Password field: white, with tight corners, the submit button and caps
+    // lock inside it, and the background's colour for its text
     readonly property int inputWidth: 260
     readonly property color inputColor: "white"
     readonly property color inputTextColor: "#1a1b26"
@@ -73,14 +73,14 @@ Singleton {
     // Faint against the wallpaper, as the glass's lit edge would be
     readonly property color inputEdgeColor: Qt.rgba(1, 1, 1, 0.3)
     readonly property int inputHeight: 36
-    readonly property int inputRadius: 8
+    readonly property int inputRadius: 4
     readonly property int inputPadding: 12
     readonly property int inputFontSize: 14
     readonly property string placeholder: "Enter Password"
     readonly property string maskCharacter: "•"
     readonly property int maskSpacing: 3
     readonly property int buttonSize: 26
-    readonly property int buttonRadius: 4
+    readonly property int buttonRadius: 2
     readonly property string submitIcon: String.fromCodePoint(0xf0054)
     readonly property string capsLockIcon: String.fromCodePoint(0xf0632)
     readonly property int iconSize: 16

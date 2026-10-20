@@ -78,7 +78,7 @@ QtObject {
     readonly property color inputHoverColor: Qt.rgba(26 / 255, 27 / 255, 38 / 255, 0.08)
     readonly property color inputEdgeColor: Qt.rgba(1, 1, 1, 0.3)
     readonly property int inputHeight: 36
-    readonly property int inputRadius: 8
+    readonly property int inputRadius: 4
     readonly property int inputPadding: 12
     readonly property int inputFontSize: 14
     readonly property string placeholder: "Enter Password"
@@ -86,7 +86,7 @@ QtObject {
     readonly property string maskCharacter: "•"
     readonly property int maskSpacing: 3
     readonly property int buttonSize: 26
-    readonly property int buttonRadius: 4
+    readonly property int buttonRadius: 2
     readonly property string submitIcon: String.fromCodePoint(0xf0054)
     readonly property string capsLockIcon: String.fromCodePoint(0xf0632)
     readonly property int iconSize: 16
