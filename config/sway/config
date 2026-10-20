@@ -42,9 +42,9 @@ shadow_blur_radius 12
 shadow_color #00000059
 shadow_offset 0 3
 
-corner_radius 1
+corner_radius 0
 
-gaps inner 10
+gaps inner 5
 
 default_border pixel 2
 default_floating_border normal
