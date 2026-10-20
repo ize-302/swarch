@@ -10,13 +10,13 @@
 		"disk",
 		"cpu",
 		"memory",
-		"battery",
-		"backlight"
-	],	
+		"battery"
+	],
 	"modules-right": [
 		"custom/recording",
 		"tray",
 		"custom/volume",
+		"backlight",
 		"custom/pomodoro",
 		"network",
 		"bluetooth",

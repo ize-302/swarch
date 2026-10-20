@@ -160,7 +160,7 @@ window#waybar {
 }
 
 #backlight {
-  color: orange;
+  color: #ffffff;
 }
 
 /* Volume: the clock's colour at every level, red when boosted past 100%.
